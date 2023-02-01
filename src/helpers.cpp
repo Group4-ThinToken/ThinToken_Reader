@@ -1,0 +1,17 @@
+#include <helpers.h>
+
+String readRfidBytes(byte *buffer, byte size) {
+    String d = "";
+    // for (byte i = 0; i < size; ++i) {
+    //     d += char(buffer[i] < 0x10 ? " 0" : " ");
+    //     d += char(buffer[i]);
+    // }
+
+    return d;
+}
+
+void dumpToSerial(byte *buffer, byte size) {
+  for (byte i = 0; i < size; ++i) {
+    WebSerial.print(buffer[i]);
+  }
+}

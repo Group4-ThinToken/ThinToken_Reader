@@ -7,12 +7,14 @@
 #include <AsyncTCP.h>
 #include <AsyncElegantOTA.h>
 
+#include "helpers.h"
 #include "creds.h"
 #include "pins.h"
 
 AsyncWebServer server(80);
 
 MFRC522 rfidReader(SPI_SS, RST_PIN);
+MFRC522::MIFARE_Key key;
 
 void receiveWebSerial(uint8_t* data, size_t len) {
   String d = "";
@@ -40,6 +42,21 @@ void receiveWebSerial(uint8_t* data, size_t len) {
       WebSerial.println("Self Test OK");
     } else {
       WebSerial.println("Self Test FAIL");
+    }
+  }
+
+  if (d.equals("rfid read")) {
+    if (rfidReader.PICC_IsNewCardPresent()) {
+      WebSerial.print("Card UID: ");
+      // String data = readRfidBytes(rfidReader.uid.uidByte, rfidReader.uid.size);
+      // WebSerial.print(data);
+      dumpToSerial(rfidReader.uid.uidByte, rfidReader.uid.size);
+      WebSerial.println();
+      MFRC522::PICC_Type type = rfidReader.PICC_GetType(rfidReader.uid.sak);
+      WebSerial.print("Card Type: ");
+      WebSerial.println(rfidReader.PICC_GetTypeName(type));
+    } else {
+      WebSerial.println("No tag detected");
     }
   }
 }
@@ -84,7 +101,7 @@ void initializeWifiAndOTA() {
 void initializeRfid() {
   SPI.begin(SPI_SCK, SPI_MISO, SPI_MOSI, SPI_SS);
   rfidReader.PCD_Init();
-  delay(4);
+  delay(12);
   rfidReader.PCD_DumpVersionToSerial();
 }
 
@@ -94,6 +111,7 @@ void setup() {
   digitalWrite(LED_BUILTIN, HIGH);
 
   Serial.begin(115200);
+  Serial.print(0x1, HEX);
   initializeWifiAndOTA();
   initializeRfid();
 
@@ -101,5 +119,15 @@ void setup() {
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+  // if (!rfidReader.PICC_IsNewCardPresent()) {
+  //   return;
+  // }
+
+  // if (!rfidReader.PICC_ReadCardSerial()) {
+  //   return;
+  // }
+
+  // Serial.print("Card UID: ");
+  // dumpToSerial(rfidReader.uid.uidByte, rfidReader.uid.size);
+  // Serial.println();
 }
