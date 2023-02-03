@@ -11,6 +11,8 @@
 #include "creds.h"
 #include "pins.h"
 
+bool wifiApMode = false;
+
 AsyncWebServer server(80);
 
 MFRC522 rfidReader(SPI_SS, RST_PIN);
@@ -35,6 +37,19 @@ void receiveWebSerial(uint8_t* data, size_t len) {
     esp_restart();
   }
 
+  if (d.equals("wifi info")) {
+    WebSerial.println("[ WiFi STA Info ]");
+    WebSerial.print("Connected to: ");
+    WebSerial.println(ssid);
+    WebSerial.print("IP: ");
+    WebSerial.println(WiFi.localIP().toString());
+    WebSerial.println("[ WiFi AP Info ]");
+    WebSerial.print("SSID: ");
+    WebSerial.println(WiFi.softAPSSID());
+    WebSerial.print("IP: ");
+    WebSerial.println(WiFi.softAPIP().toString());
+  }
+
   if (d.equals("rfid test")) {
     WebSerial.println("Performing MFRC522 Self Test");
     bool res = rfidReader.PCD_PerformSelfTest();
@@ -47,14 +62,16 @@ void receiveWebSerial(uint8_t* data, size_t len) {
 
   if (d.equals("rfid read")) {
     if (rfidReader.PICC_IsNewCardPresent()) {
-      WebSerial.print("Card UID: ");
-      // String data = readRfidBytes(rfidReader.uid.uidByte, rfidReader.uid.size);
-      // WebSerial.print(data);
-      dumpToSerial(rfidReader.uid.uidByte, rfidReader.uid.size);
-      WebSerial.println();
-      MFRC522::PICC_Type type = rfidReader.PICC_GetType(rfidReader.uid.sak);
-      WebSerial.print("Card Type: ");
-      WebSerial.println(rfidReader.PICC_GetTypeName(type));
+      if (rfidReader.PICC_ReadCardSerial()) {
+        WebSerial.print("Card UID: ");
+        // String data = readRfidBytes(rfidReader.uid.uidByte, rfidReader.uid.size);
+        // WebSerial.print(data);
+        dumpToSerial(rfidReader.uid.uidByte, rfidReader.uid.size);
+        WebSerial.println();
+        MFRC522::PICC_Type type = rfidReader.PICC_GetType(rfidReader.uid.sak);
+        WebSerial.print("Card Type: ");
+        WebSerial.println(rfidReader.PICC_GetTypeName(type));
+      }
     } else {
       WebSerial.println("No tag detected");
     }
@@ -63,7 +80,8 @@ void receiveWebSerial(uint8_t* data, size_t len) {
 
 void initializeWifiAndOTA() {
   // Connect to WiFi network
-  WiFi.mode(WIFI_STA);
+  WiFi.mode(WIFI_AP_STA);
+  WiFi.softAP(ap_ssid, ap_password);
   WiFi.begin(ssid, password);
   Serial.println("");
 
@@ -119,15 +137,15 @@ void setup() {
 }
 
 void loop() {
-  // if (!rfidReader.PICC_IsNewCardPresent()) {
-  //   return;
-  // }
+  if (!rfidReader.PICC_IsNewCardPresent()) {
+    return;
+  }
 
-  // if (!rfidReader.PICC_ReadCardSerial()) {
-  //   return;
-  // }
+  if (!rfidReader.PICC_ReadCardSerial()) {
+    return;
+  }
 
-  // Serial.print("Card UID: ");
-  // dumpToSerial(rfidReader.uid.uidByte, rfidReader.uid.size);
-  // Serial.println();
+  WebSerial.println("Card UID: ");
+  dumpToSerial(rfidReader.uid.uidByte, rfidReader.uid.size);
+  WebSerial.println();
 }
