@@ -1,3 +1,6 @@
+#ifndef pins_h
+#define pins_h
+
 // ===== PIN ASSIGNMENTS =====
 #define LED_BUILTIN 33
 
@@ -7,3 +10,5 @@
 #define SPI_SS 15
 
 #define RST_PIN 2
+
+#endif

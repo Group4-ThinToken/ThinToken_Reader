@@ -10,8 +10,11 @@
 #include "helpers.h"
 #include "creds.h"
 #include "pins.h"
+#include "commands.h"
 
 bool wifiApMode = false;
+
+WebSerialCmdHandler wsCmdHandler;
 
 AsyncWebServer server(80);
 
@@ -24,58 +27,7 @@ void receiveWebSerial(uint8_t* data, size_t len) {
     d += char(data[i]);
   }
 
-  WebSerial.println(d);
-
-  if (d.equals("reboot")) {
-    WebSerial.print("Device restarting ...");
-    WebSerial.print("Refresh this page if it does not automatically reconnect");
-
-    digitalWrite(LED_BUILTIN, HIGH);
-    delay(1000);
-    delay(1000);
-    delay(1000);
-    esp_restart();
-  }
-
-  if (d.equals("wifi info")) {
-    WebSerial.println("[ WiFi STA Info ]");
-    WebSerial.print("Connected to: ");
-    WebSerial.println(ssid);
-    WebSerial.print("IP: ");
-    WebSerial.println(WiFi.localIP().toString());
-    WebSerial.println("[ WiFi AP Info ]");
-    WebSerial.print("SSID: ");
-    WebSerial.println(WiFi.softAPSSID());
-    WebSerial.print("IP: ");
-    WebSerial.println(WiFi.softAPIP().toString());
-  }
-
-  if (d.equals("rfid test")) {
-    WebSerial.println("Performing MFRC522 Self Test");
-    bool res = rfidReader.PCD_PerformSelfTest();
-    if (res) {
-      WebSerial.println("Self Test OK");
-    } else {
-      WebSerial.println("Self Test FAIL");
-    }
-  }
-
-  if (d.equals("rfid read")) {
-    if (rfidReader.PICC_IsNewCardPresent()) {
-      if (rfidReader.PICC_ReadCardSerial()) {
-        WebSerial.print("Card UID: ");
-        // String data = readRfidBytes(rfidReader.uid.uidByte, rfidReader.uid.size);
-        // WebSerial.print(data);
-        dumpToSerial(rfidReader.uid.uidByte, rfidReader.uid.size);
-        WebSerial.println();
-        MFRC522::PICC_Type type = rfidReader.PICC_GetType(rfidReader.uid.sak);
-        WebSerial.print("Card Type: ");
-        WebSerial.println(rfidReader.PICC_GetTypeName(type));
-      }
-    } else {
-      WebSerial.println("No tag detected");
-    }
-  }
+  wsCmdHandler.runCommand(d);
 }
 
 void initializeWifiAndOTA() {
@@ -121,6 +73,8 @@ void initializeRfid() {
   rfidReader.PCD_Init();
   delay(12);
   rfidReader.PCD_DumpVersionToSerial();
+
+  wsCmdHandler.setRfidReader(&rfidReader);
 }
 
 void setup() {

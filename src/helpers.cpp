@@ -10,14 +10,6 @@ String readRfidBytes(byte *buffer, byte size) {
     return d;
 }
 
-void dumpToSerial(byte *buffer, byte size) {
-  for (byte i = 0; i < size; ++i) {
-    WebSerial.print(i);
-    WebSerial.print(": ");
-    WebSerial.println(buffer[i]);
-  }
-}
-
 // void dumpToSerial(byte *buffer, byte size) {
 //   for (byte i = 0; i < size; ++i) {
 //     Serial.print(buffer[i] < 0x10 ? " 0" : " ");
