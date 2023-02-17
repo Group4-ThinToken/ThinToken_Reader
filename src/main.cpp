@@ -6,6 +6,10 @@
 #include <ESPAsyncWebServer.h>
 #include <AsyncTCP.h>
 #include <AsyncElegantOTA.h>
+#include <BLEDevice.h>
+#include <BLEUtils.h>
+#include <BLEServer.h>
+// TODO: Follow randomnerdtutorials about this
 
 #include "helpers.h"
 #include "creds.h"
@@ -123,15 +127,36 @@ void initializeRfid() {
   rfidReader.PCD_DumpVersionToSerial();
 }
 
+void initializeBluetooth() {
+  BLEDevice::init("ThinToken Reader");
+  BLEServer *pServer = BLEDevice::createServer();
+  BLEService *pService = pServer->createService(SERVICE_UUID);
+  BLECharacteristic *pCharacteristic = pService->createCharacteristic(
+    CHARACTERISTIC_UUID,
+    BLECharacteristic::PROPERTY_READ |
+    BLECharacteristic::PROPERTY_WRITE
+  );
+
+  pCharacteristic->setValue("Hello world");
+  pService->start();
+  BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
+  pAdvertising->addServiceUUID(SERVICE_UUID);
+  pAdvertising->setScanResponse(true);
+  pAdvertising->setMinPreferred(0x06);
+  pAdvertising->setMaxPreferred(0x10);
+  BLEDevice::startAdvertising();
+  WebSerial.println("Bluetooth initialized:\nDevice Name: ThinToken Reader");
+}
+
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
 
   digitalWrite(LED_BUILTIN, HIGH);
 
   Serial.begin(115200);
-  Serial.print(0x1, HEX);
   initializeWifiAndOTA();
   initializeRfid();
+  initializeBluetooth();
 
   digitalWrite(LED_BUILTIN, LOW);
 }
