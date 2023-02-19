@@ -9,18 +9,24 @@
 #include <BLEDevice.h>
 #include <BLEUtils.h>
 #include <BLEServer.h>
-// TODO: Follow randomnerdtutorials about this
+#include <BLE2902.h>
 
 #include "helpers.h"
 #include "creds.h"
 #include "pins.h"
+#include "ServerCallbacks.h"
 
-bool wifiApMode = false;
+// bool wifiApMode = false;  // This is currently unused 2/17/22
 
 AsyncWebServer server(80);
 
 MFRC522 rfidReader(SPI_SS, RST_PIN);
 MFRC522::MIFARE_Key key;
+
+BLEServer *pServer = NULL;
+BLEService *pService = NULL;
+BLECharacteristic *pCharacteristic = NULL;
+ServerCallbacks *pServerCallbacks = NULL;
 
 void receiveWebSerial(uint8_t* data, size_t len) {
   String d = "";
@@ -129,14 +135,17 @@ void initializeRfid() {
 
 void initializeBluetooth() {
   BLEDevice::init("ThinToken Reader");
-  BLEServer *pServer = BLEDevice::createServer();
-  BLEService *pService = pServer->createService(SERVICE_UUID);
-  BLECharacteristic *pCharacteristic = pService->createCharacteristic(
+  pServer = BLEDevice::createServer();
+  pServerCallbacks = new ServerCallbacks();
+  pServer->setCallbacks(pServerCallbacks);
+  pService = pServer->createService(SERVICE_UUID);
+  pCharacteristic = pService->createCharacteristic(
     CHARACTERISTIC_UUID,
     BLECharacteristic::PROPERTY_READ |
-    BLECharacteristic::PROPERTY_WRITE
+    BLECharacteristic::PROPERTY_NOTIFY
   );
 
+  pCharacteristic->addDescriptor(new BLE2902());
   pCharacteristic->setValue("Hello world");
   pService->start();
   BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
@@ -147,6 +156,9 @@ void initializeBluetooth() {
   BLEDevice::startAdvertising();
   WebSerial.println("Bluetooth initialized:\nDevice Name: ThinToken Reader");
 }
+
+unsigned long lastBtUpdate;
+int btTest = 0;
 
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
@@ -159,9 +171,18 @@ void setup() {
   initializeBluetooth();
 
   digitalWrite(LED_BUILTIN, LOW);
+
+  lastBtUpdate = millis();
 }
 
 void loop() {
+  if (millis() - lastBtUpdate > 5000) {
+    pCharacteristic->setValue(btTest);
+    pCharacteristic->notify();
+    lastBtUpdate = millis();
+    btTest += 1;
+  }
+
   if (!rfidReader.PICC_IsNewCardPresent()) {
     return;
   }
