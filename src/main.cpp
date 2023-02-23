@@ -88,7 +88,7 @@ void initializeRfid() {
 }
 
 void initializeBluetooth() {
-  BLEDevice::init("ThinToken Reader");
+  BLEDevice::init(DEVICE_NAME);
   pServer = BLEDevice::createServer();
   pServerCallbacks = new ServerCallbacks();
   pServer->setCallbacks(pServerCallbacks);
@@ -108,6 +108,8 @@ void initializeBluetooth() {
   pAdvertising->setMinPreferred(0x06);
   pAdvertising->setMaxPreferred(0x10);
   BLEDevice::startAdvertising();
+
+  wsCmdHandler.setBtServerCallbacks(pServerCallbacks);
   WebSerial.println("Bluetooth initialized:\nDevice Name: ThinToken Reader");
 }
 
