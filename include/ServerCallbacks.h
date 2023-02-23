@@ -1,3 +1,6 @@
+#ifndef ServerCallbacks_h
+#define ServerCallbacks_h
+
 #include <BLEDevice.h>
 #include <BLEServer.h>
 
@@ -15,3 +18,5 @@ public:
   void onConnect(BLEServer *pServer);
   void onDisconnect(BLEServer *pServer);
 };
+
+#endif

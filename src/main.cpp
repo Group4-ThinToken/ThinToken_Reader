@@ -43,8 +43,8 @@ void receiveWebSerial(uint8_t* data, size_t len) {
 void initializeWifiAndOTA() {
   // Connect to WiFi network
   WiFi.mode(WIFI_AP_STA);
-  WiFi.softAP(ap_ssid, ap_password);
-  WiFi.begin(ssid, password);
+  WiFi.softAP(AP_SSID, AP_PASSWORD);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.println("");
 
   // Wait for connection
@@ -58,7 +58,7 @@ void initializeWifiAndOTA() {
 
   Serial.println("");
   Serial.print("Connected to ");
-  Serial.println(ssid);
+  Serial.println(WIFI_SSID);
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
 
@@ -148,6 +148,6 @@ void loop() {
   }
 
   WebSerial.println("Card UID: ");
-  dumpToSerial(rfidReader.uid.uidByte, rfidReader.uid.size);
+  wsCmdHandler.dumpToSerial(rfidReader.uid.uidByte, rfidReader.uid.size);
   WebSerial.println();
 }

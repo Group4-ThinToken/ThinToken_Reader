@@ -1,10 +1,8 @@
 #include "commands.h"
 #include "pins.h"
 #include "creds.h"
-#include "ServerCallbacks.h"
 
 #include <WebSerialLite.h>
-#include <MFRC522.h>
 
 WebSerialCmdHandler::WebSerialCmdHandler() { }
 

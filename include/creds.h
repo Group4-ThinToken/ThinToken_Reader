@@ -1,11 +1,11 @@
 // ===== WIFI CREDENTIALS =====
-const char *host = "esp32";
-const char *ssid = "HUAWEI-V4XU";
-const char *password = "Tataycruz";
+#define WIFI_HOST "ThinToken Reader"
+#define WIFI_SSID "HUAWEI-V4XU"
+#define WIFI_PASSWORD "Tataycruz"
 
 // ===== WIFI AP CREDENTIALS =====
-const char *ap_ssid = "James esp32";
-const char *ap_password = "CPD2-Group 4";
+#define AP_SSID "James esp32"
+#define AP_PASSWORD "CPD2-Group 4"
 
 // ===== BT UUIDs =====
 #define DEVICE_NAME         "ThinToken Reader"
