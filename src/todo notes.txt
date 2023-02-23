@@ -1,0 +1,21 @@
+1. Create a first time establishment of trust between pc and thintoken
+    a. could be a basic handshake, where a random string will be generated
+    b. then that string will be stored in both the pc and a secure location in the espfs
+    c. ESP32 BLE stop advertising
+    d. all future characteristic reads will require validation of this key
+
+LIMITATIONS of 1:
+    a. only 1 pair at a time, to transfer devices, the esp must forget the current key and repeat the handshake
+
+2. In browser, write keys in storage (see browser extensions Storage API)
+
+3. Flow:
+    a. User taps RFID tag
+    b. ESP32 generates TOTP and saves it in memory temporarily
+    c. Notify clients (theoretically this should only be one) that a tag is tapped
+    d. The true client must write to a characteristic its key
+    e. ESP validates key
+    f. If key is valid, update a characteristic to reflect TOTP
+    g. PC reads the characteristic with the TOTP
+    h. PC writes acknowledgement(?)
+    i. After TOTP gets read, clear the characteristic

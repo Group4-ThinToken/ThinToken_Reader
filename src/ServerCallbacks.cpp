@@ -22,6 +22,7 @@ bool ServerCallbacks::deviceDidDisconnect() {
 
 void ServerCallbacks::onConnect(BLEServer *pServer) {
     n_devicesConnected += 1;
+    BLEDevice::stopAdvertising();
 }
 
 void ServerCallbacks::onDisconnect(BLEServer *pServer) {

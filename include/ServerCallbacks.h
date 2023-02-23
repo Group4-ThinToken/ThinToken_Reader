@@ -1,3 +1,4 @@
+#include <BLEDevice.h>
 #include <BLEServer.h>
 
 class ServerCallbacks: public BLEServerCallbacks {
