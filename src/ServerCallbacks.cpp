@@ -24,7 +24,6 @@ bool ServerCallbacks::deviceDidDisconnect() {
 
 void ServerCallbacks::onConnect(BLEServer *pServer) {
     n_devicesConnected += 1;
-    BLEDevice::stopAdvertising();
     WebSerial.println("Bluetooth device connected");
 }
 

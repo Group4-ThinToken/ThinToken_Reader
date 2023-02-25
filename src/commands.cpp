@@ -23,6 +23,8 @@ void WebSerialCmdHandler::runCommand(String name) {
     wifiInfo();
   } else if (name.equals("rfid read")) {
     rfidRead();
+  } else if (name.equals("bt info")) {
+    bluetoothInfo();
   } else {
     WebSerial.println("Invalid command");
   }
