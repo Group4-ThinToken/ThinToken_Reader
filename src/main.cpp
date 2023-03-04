@@ -50,7 +50,7 @@ void initializeWifiAndOTA() {
   unsigned long timeoutBegin = millis();
   unsigned long timeoutMax = 10000;
   // Wait for connection
-  while (millis() - timeoutBegin > timeoutMax && WiFi.status() != WL_CONNECTED) {
+  while (millis() - timeoutBegin < timeoutMax && WiFi.status() != WL_CONNECTED) {
     digitalWrite(LED_BUILTIN, LOW);
     delay(250);
     digitalWrite(LED_BUILTIN, HIGH);
@@ -59,6 +59,7 @@ void initializeWifiAndOTA() {
   }
 
   if (WiFi.status() == WL_CONNECTED) {
+    // TODO: This is not working as intended
     Serial.println("");
     Serial.print("Connected to ");
     Serial.println(WIFI_SSID);
