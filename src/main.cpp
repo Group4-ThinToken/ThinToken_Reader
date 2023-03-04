@@ -47,8 +47,10 @@ void initializeWifiAndOTA() {
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.println("");
 
+  unsigned long timeoutBegin = millis();
+  unsigned long timeoutMax = 10000;
   // Wait for connection
-  while (WiFi.status() != WL_CONNECTED) {
+  while (millis() - timeoutBegin > timeoutMax && WiFi.status() != WL_CONNECTED) {
     digitalWrite(LED_BUILTIN, LOW);
     delay(250);
     digitalWrite(LED_BUILTIN, HIGH);
@@ -56,11 +58,15 @@ void initializeWifiAndOTA() {
     Serial.print(".");
   }
 
-  Serial.println("");
-  Serial.print("Connected to ");
-  Serial.println(WIFI_SSID);
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("");
+    Serial.print("Connected to ");
+    Serial.println(WIFI_SSID);
+    Serial.print("IP address: ");
+    Serial.println(WiFi.localIP());
+  } else {
+    Serial.printf("Connection to %s failed.", WIFI_SSID);
+  }
 
   // Basic index page for HTTP server, HTTP server will be
   // used for OTA and WebSerial

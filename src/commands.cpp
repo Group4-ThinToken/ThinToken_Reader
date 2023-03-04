@@ -50,10 +50,14 @@ void WebSerialCmdHandler::reboot() {
 
 void WebSerialCmdHandler::wifiInfo() {
   WebSerial.println("[ WiFi STA Info ]");
-  WebSerial.print("Connected to: ");
-  WebSerial.println(WiFi.SSID());
-  WebSerial.print("IP: ");
-  WebSerial.println(WiFi.localIP().toString());
+  if (WiFi.status() == WL_CONNECTED) {
+    WebSerial.print("Connected to: ");
+    WebSerial.println(WiFi.SSID());
+    WebSerial.print("IP: ");
+    WebSerial.println(WiFi.localIP().toString());
+  } else {
+    WebSerial.println("Not operating in STA mode.");
+  }
   WebSerial.println("[ WiFi AP Info ]");
   WebSerial.print("SSID: ");
   WebSerial.println(WiFi.softAPSSID());
