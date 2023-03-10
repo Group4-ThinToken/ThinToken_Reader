@@ -11,7 +11,7 @@
 class WebSerialCmdHandler {
 public:
   WebSerialCmdHandler();
-  void runCommand(String name);
+  void runCommand(String name, String arg);
   void setRfidReader(MFRC522* t_reader);
   void setBtServerCallbacks(ServerCallbacks* t_btServerCallbacks);
   void dumpToSerial(byte *buffer, byte size);
@@ -23,6 +23,7 @@ private:
   void wifiInfo();
   void rfidRead();
   void bluetoothInfo();
+  void otpTest(std::string testKey);
 };
 
 #endif

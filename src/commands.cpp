@@ -1,8 +1,10 @@
 #include "commands.h"
 #include "pins.h"
 #include "creds.h"
+#include "Authenticator.h"
 
 #include <WebSerialLite.h>
+#include <vector>
 
 WebSerialCmdHandler::WebSerialCmdHandler() { }
 
@@ -14,8 +16,10 @@ void WebSerialCmdHandler::setBtServerCallbacks(ServerCallbacks* t_serverCallback
   m_btServerCallbacks = t_serverCallbacks;
 }
 
-void WebSerialCmdHandler::runCommand(String name) {
-  WebSerial.println(name);
+void WebSerialCmdHandler::runCommand(String name, String arg) {
+  WebSerial.print(name);
+  WebSerial.print(" ");
+  WebSerial.println(arg);
 
   if (name.equals("reboot")) {
     reboot();
@@ -25,9 +29,38 @@ void WebSerialCmdHandler::runCommand(String name) {
     rfidRead();
   } else if (name.equals("bt info")) {
     bluetoothInfo();
+  } else if (name.equals("otp test")) {
+    const char* testKey = arg.c_str();
+    otpTest(testKey);
   } else {
     WebSerial.println("Invalid command");
   }
+}
+
+void WebSerialCmdHandler::otpTest(std::string testKey) {
+  std::vector<uint8_t> decodeBuffer;
+
+  // Predict size of secret
+  auto secretSizePredict = (int) ceil(testKey.size() / 1.6);
+  decodeBuffer.resize(secretSizePredict);
+  int count = Authenticator::base32Decode(testKey.data(), decodeBuffer.data(), secretSizePredict);
+  decodeBuffer.resize(count);
+
+  WebSerial.println(count);
+
+  WebSerial.print("Secret: ");
+  WebSerial.println(testKey.c_str());
+  WebSerial.print("Decoded: ");
+  String decodeBufferStr = "";
+  for (int i = 0; i < count; i++) {
+    decodeBufferStr += int(decodeBuffer[i]);
+  }
+
+  WebSerial.println(decodeBufferStr);
+  WebSerial.print("Current Time: ");
+  WebSerial.println((unsigned int)Authenticator::getCurrTime());
+  WebSerial.print("OTP: ");
+  WebSerial.println(Authenticator::generateOtp(decodeBuffer.data(), decodeBuffer.size()));
 }
 
 void WebSerialCmdHandler::dumpToSerial(byte *buffer, byte size) {

@@ -10,6 +10,7 @@
 #include <BLEUtils.h>
 #include <BLEServer.h>
 #include <BLE2902.h>
+#include <time.h>
 
 #include "helpers.h"
 #include "creds.h"
@@ -33,11 +34,32 @@ ServerCallbacks *pServerCallbacks = NULL;
 
 void receiveWebSerial(uint8_t* data, size_t len) {
   String d = "";
-  for(int i = 0; i < len; i++){
+  String arg = "";
+  int nSpaces = 0;
+  // for(int i = 0; i < len; i++){
+  //   if (char(data[i]) == ' ') {
+  //     nSpaces++;
+  //   }
+  //   d += char(data[i]);
+  // }
+  int i = 0;
+  while (i < len && nSpaces < 2) {
+    if (char(data[i]) == ' ') {
+      nSpaces++;
+    }
     d += char(data[i]);
+    i++;
   }
 
-  wsCmdHandler.runCommand(d);
+  while (i < len) {
+    arg += char(data[i]);
+    i++;
+  }
+
+  d.trim();
+  arg.trim();
+
+  wsCmdHandler.runCommand(d, arg);
 }
 
 void initializeWifiAndOTA() {
@@ -69,6 +91,9 @@ void initializeWifiAndOTA() {
     Serial.printf("Connection to %s failed.", WIFI_SSID);
   }
 
+  const char* ntpServer = "pool.ntp.org";
+  configTime(0, 0, ntpServer);
+
   // Basic index page for HTTP server, HTTP server will be
   // used for OTA and WebSerial
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -83,6 +108,9 @@ void initializeWifiAndOTA() {
   // Start webserial server so we don't need USB cable to view serial monitor
   WebSerial.onMessage(receiveWebSerial);
   WebSerial.begin(&server);
+
+  Serial.print("Device time: ");
+  Serial.println(time(nullptr));
 }
 
 void initializeRfid() {
