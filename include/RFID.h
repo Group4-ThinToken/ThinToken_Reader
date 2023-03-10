@@ -9,7 +9,7 @@ public:
   RFID(MFRC522* t_reader);
   MFRC522* getReader();
   std::vector<byte> readTag(byte sector);
-  int writeTag(byte sector);
+  int writeTag(byte sector, std::vector<byte> data);
 
 private:
   MFRC522* reader;
