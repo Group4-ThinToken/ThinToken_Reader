@@ -15,6 +15,7 @@ public:
   void setRfidReader(MFRC522* t_reader);
   void setBtServerCallbacks(ServerCallbacks* t_btServerCallbacks);
   void dumpToSerial(byte *buffer, byte size);
+  void dumpToSerial(byte *buffer, size_t size);
 private:
   MFRC522* m_rfidReader;
   ServerCallbacks* m_btServerCallbacks;

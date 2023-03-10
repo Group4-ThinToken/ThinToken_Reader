@@ -5,6 +5,7 @@
 
 #include <WebSerialLite.h>
 #include <vector>
+#include <string>
 
 WebSerialCmdHandler::WebSerialCmdHandler() { }
 
@@ -64,11 +65,21 @@ void WebSerialCmdHandler::otpTest(std::string testKey) {
 }
 
 void WebSerialCmdHandler::dumpToSerial(byte *buffer, byte size) {
+  String d = "";
   for (byte i = 0; i < size; ++i) {
-    WebSerial.print(buffer[i]);
-    WebSerial.print(" ");
+    d += buffer[i];
+    d += ' ';
   }
-  WebSerial.println();
+  WebSerial.println(d);
+}
+
+void WebSerialCmdHandler::dumpToSerial(byte *buffer, size_t size) {
+  String d = "";
+  for (unsigned int i = 0; i < size; ++i) {
+    d += buffer[i];
+    d += ' ';
+  }
+  WebSerial.println(d);
 }
 
 void WebSerialCmdHandler::reboot() {

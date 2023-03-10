@@ -17,6 +17,7 @@
 #include "pins.h"
 #include "ServerCallbacks.h"
 #include "commands.h"
+#include "RFID.h"
 
 // bool wifiApMode = false;  // This is currently unused 2/17/22
 
@@ -25,7 +26,12 @@ WebSerialCmdHandler wsCmdHandler;
 AsyncWebServer server(80);
 
 MFRC522 rfidReader(SPI_SS, RST_PIN);
+RFID reader(&rfidReader);
 MFRC522::MIFARE_Key key;
+bool rfidWriteMode;
+unsigned long lastRfidOp;
+// byte lastTagUid[10];
+std::array<byte, 10> lastTagUid;
 
 BLEServer *pServer = NULL;
 BLEService *pService = NULL;
@@ -118,6 +124,9 @@ void initializeRfid() {
   rfidReader.PCD_Init();
   delay(12);
   rfidReader.PCD_DumpVersionToSerial();
+  rfidWriteMode = false;
+  lastRfidOp = 0;
+  lastTagUid = {0};
 
   wsCmdHandler.setRfidReader(&rfidReader);
 }
@@ -174,15 +183,28 @@ void loop() {
     btTest += 1;
   }
 
-  if (!rfidReader.PICC_IsNewCardPresent()) {
-    return;
+  // if (!rfidReader.PICC_IsNewCardPresent()) {
+  //   return;
+  // }
+
+  // if (!rfidReader.PICC_ReadCardSerial()) {
+  //   return;
+  // }
+
+  if (rfidReader.PICC_IsNewCardPresent()) {
+    if (rfidReader.PICC_ReadCardSerial()) {
+      if (millis() - lastRfidOp > 5000) {
+        WebSerial.println("Card UID: ");
+        wsCmdHandler.dumpToSerial(rfidReader.uid.uidByte, rfidReader.uid.size);
+        WebSerial.println();
+        WebSerial.println("Card Data - Sector 1");
+        std::vector<byte> data = reader.readTag(1);
+        wsCmdHandler.dumpToSerial(data.data(), data.size());
+
+        WebSerial.println("Done reading.");
+        lastRfidOp = millis();
+      }
+    }
   }
 
-  if (!rfidReader.PICC_ReadCardSerial()) {
-    return;
-  }
-
-  WebSerial.println("Card UID: ");
-  wsCmdHandler.dumpToSerial(rfidReader.uid.uidByte, rfidReader.uid.size);
-  WebSerial.println();
 }
