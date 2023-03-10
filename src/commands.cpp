@@ -47,10 +47,10 @@ void WebSerialCmdHandler::otpTest(std::string testKey) {
   int count = Authenticator::base32Decode(testKey.data(), decodeBuffer.data(), secretSizePredict);
   decodeBuffer.resize(count);
 
-  WebSerial.println(count);
-
   WebSerial.print("Secret: ");
   WebSerial.println(testKey.c_str());
+  WebSerial.print("Secret size: ");
+  WebSerial.println(sizeof(testKey));
   WebSerial.print("Decoded: ");
   String decodeBufferStr = "";
   for (int i = 0; i < count; i++) {
