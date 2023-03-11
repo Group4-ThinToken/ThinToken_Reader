@@ -17,6 +17,10 @@ void WebSerialCmdHandler::setBtServerCallbacks(ServerCallbacks* t_serverCallback
   m_btServerCallbacks = t_serverCallbacks;
 }
 
+void WebSerialCmdHandler::setRfidWriteMode(bool* t_rfidWriteMode) {
+  m_rfidWriteMode = t_rfidWriteMode;
+}
+
 void WebSerialCmdHandler::runCommand(String name, String arg) {
   WebSerial.print(name);
   WebSerial.print(" ");
@@ -28,6 +32,8 @@ void WebSerialCmdHandler::runCommand(String name, String arg) {
     wifiInfo();
   } else if (name.equals("rfid read")) {
     rfidRead();
+  } else if (name.equals("rfid mode")) {
+    *m_rfidWriteMode = arg.equals("write") ? true : false;
   } else if (name.equals("bt info")) {
     bluetoothInfo();
   } else if (name.equals("otp test")) {

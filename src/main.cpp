@@ -129,6 +129,7 @@ void initializeRfid() {
   lastTagUid = {0};
 
   wsCmdHandler.setRfidReader(&rfidReader);
+  wsCmdHandler.setRfidWriteMode(&rfidWriteMode);
 }
 
 void initializeBluetooth() {
@@ -183,25 +184,40 @@ void loop() {
     btTest += 1;
   }
 
-  // if (!rfidReader.PICC_IsNewCardPresent()) {
-  //   return;
-  // }
-
-  // if (!rfidReader.PICC_ReadCardSerial()) {
-  //   return;
-  // }
-
   if (rfidReader.PICC_IsNewCardPresent()) {
     if (rfidReader.PICC_ReadCardSerial()) {
       if (millis() - lastRfidOp > 5000) {
         WebSerial.println("Card UID: ");
         wsCmdHandler.dumpToSerial(rfidReader.uid.uidByte, rfidReader.uid.size);
         WebSerial.println();
-        WebSerial.println("Card Data - Sector 1");
-        std::vector<byte> data = reader.readTag(1);
-        wsCmdHandler.dumpToSerial(data.data(), data.size());
 
-        WebSerial.println("Done reading.");
+        WebSerial.print("RFID Write Mode: ");
+        WebSerial.println(rfidWriteMode);
+        switch (rfidWriteMode) {
+          case true: {
+            WebSerial.println("Writing to RFID Tag - Sector 1");
+            std::vector<byte> data = {0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF };
+
+            try {
+              int nWritten = reader.writeTag(1, data);
+
+              WebSerial.print("Successfully written ");
+              WebSerial.print(nWritten);
+              WebSerial.println(" bytes.");
+            } catch(MFRC522::StatusCode e) {
+              WebSerial.print("Write failed. Status: ");
+              WebSerial.println(e);
+            }
+          }
+          case false: {
+            WebSerial.println("Card Data - Sector 1");
+            std::vector<byte> data = reader.readTag(1);
+            wsCmdHandler.dumpToSerial(data.data(), data.size());
+
+            WebSerial.println("Done reading.");
+          }
+        }
+
         lastRfidOp = millis();
       }
     }

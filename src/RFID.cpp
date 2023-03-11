@@ -44,19 +44,23 @@ std::vector<byte> RFID::readTag(byte sector) {
 }
 
 int RFID::writeTag(byte sector, std::vector<byte> data) {
+  Serial.println("Write tag");
   MFRC522::StatusCode status;
   byte blockStart = 4 * sector;
   byte blockEnd = 7 * sector;
 
+  Serial.println("Auth");
   // Authenticate via key B
   status = reader->PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_B, blockEnd, &MiKey, &(reader->uid));
 
+  Serial.println(status);
   if (status != MFRC522::STATUS_OK) {
     throw status;
   }
 
   status = reader->MIFARE_Write(blockStart, data.data(), 16);
 
+  Serial.println(status);
   if (status != MFRC522::STATUS_OK) {
     throw status;
   }
