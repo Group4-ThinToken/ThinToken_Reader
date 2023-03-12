@@ -28,6 +28,7 @@ void ServerCallbacks::onConnect(BLEServer *pServer) {
 void ServerCallbacks::onDisconnect(BLEServer *pServer) {
   n_devicesConnected -= 1;
   WebSerial.println("Bluetooth device disconnected");
+  pServer->startAdvertising();
 }
 
 // == Characteristic Callbacks
@@ -47,7 +48,7 @@ void CharacteristicCallbacks::onWrite(BLECharacteristic *pCharacteristic,
   WebSerial.print("Char UUID: ");
   WebSerial.println(uuid.toString().c_str());
   WebSerial.print("Raw Value: ");
-  
+
   for (unsigned int i = 0; i < size; ++i) {
     display += data[i];
     display += ' ';
@@ -66,16 +67,21 @@ void CharacteristicCallbacks::onWrite(BLECharacteristic *pCharacteristic,
   }
 }
 
-void CharacteristicCallbacks::onStatus(BLECharacteristic* pCharacteristic, Status s, uint32_t code) {
+void CharacteristicCallbacks::onStatus(BLECharacteristic *pCharacteristic,
+                                       Status s, uint32_t code) {
   auto uuid = pCharacteristic->getUUID();
-  if (s == BLECharacteristicCallbacks::SUCCESS_INDICATE && uuid.toString() == OTP_CHARACTERISTIC && !pCharacteristic->getValue().empty()) {
+  if (s == BLECharacteristicCallbacks::SUCCESS_INDICATE &&
+      uuid.toString() == OTP_CHARACTERISTIC &&
+      !pCharacteristic->getValue().empty()) {
     WebSerial.println("OTP Sent");
 
     pCharacteristic->setValue("");
     pCharacteristic->indicate();
   }
 
-  if (s != BLECharacteristicCallbacks::SUCCESS_NOTIFY) {
+  if (s == BLECharacteristicCallbacks::ERROR_GATT ||
+      s == BLECharacteristicCallbacks::ERROR_INDICATE_TIMEOUT ||
+      s == BLECharacteristicCallbacks::ERROR_INDICATE_FAILURE) {
     WebSerial.print("BLE status error: ");
     WebSerial.println(s);
     WebSerial.print("Additional info: ");
@@ -83,21 +89,18 @@ void CharacteristicCallbacks::onStatus(BLECharacteristic* pCharacteristic, Statu
   }
 }
 
-void CharacteristicCallbacks::statusCharHandler() {
+void CharacteristicCallbacks::statusCharHandler() {}
 
-}
+void CharacteristicCallbacks::secretCharHandler() {}
 
-void CharacteristicCallbacks::secretCharHandler() {
-
-}
-
-void CharacteristicCallbacks::timeCharHandler(uint8_t* data, size_t size) {
+void CharacteristicCallbacks::timeCharHandler(uint8_t *data, size_t size) {
   if (size != 4) {
     WebSerial.println("Data size invalid to be UNIX timestamp.");
     return;
   }
 
-  uint32_t data32 = data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
+  uint32_t data32 =
+      data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
 
   WebSerial.print("Setting time to: ");
   WebSerial.println(data32);
