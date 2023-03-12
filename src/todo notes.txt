@@ -19,3 +19,11 @@ LIMITATIONS of 1:
     g. PC reads the characteristic with the TOTP
     h. PC writes acknowledgement(?)
     i. After TOTP gets read, clear the characteristic
+
+
+BT Services and Characteristics
+- ThinToken Service
+  + Time Characteristic (Write)
+  + OTP Characteristic (Indicate)
+  + Secret Characteristic (Write No Read)
+  + Status Characteristic (Notify/Write)

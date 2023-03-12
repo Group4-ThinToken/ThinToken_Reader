@@ -15,8 +15,21 @@ public:
   int getNumConnected();
   bool deviceDidConnect();
   bool deviceDidDisconnect();
-  void onConnect(BLEServer *pServer);
-  void onDisconnect(BLEServer *pServer);
+  void onConnect(BLEServer* pServer);
+  void onDisconnect(BLEServer* pServer);
+};
+
+class CharacteristicCallbacks: public BLECharacteristicCallbacks {
+private:
+  void statusCharHandler();
+  void  secretCharHandler();
+  void timeCharHandler(uint8_t* data, size_t size);
+
+public:
+  CharacteristicCallbacks();
+  ~CharacteristicCallbacks();
+  void onWrite(BLECharacteristic* pCharacteristic, esp_ble_gatts_cb_param_t* param);
+  void onStatus(BLECharacteristic* pCharacteristic, Status s, uint32_t code);
 };
 
 #endif

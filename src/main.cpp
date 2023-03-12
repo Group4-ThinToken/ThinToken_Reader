@@ -35,8 +35,16 @@ std::array<byte, 10> lastTagUid;
 
 BLEServer *pServer = NULL;
 BLEService *pService = NULL;
-BLECharacteristic *pCharacteristic = NULL;
+BLEService *pService2 = NULL;
 ServerCallbacks *pServerCallbacks = NULL;
+BLECharacteristic *statusCharacteristic = NULL;
+CharacteristicCallbacks *statusCallback = NULL;
+BLECharacteristic *secretCharacteristic = NULL;
+CharacteristicCallbacks *secretCallback = NULL;
+BLECharacteristic *otpCharacteristic = NULL;
+CharacteristicCallbacks *otpCallback = NULL;
+BLECharacteristic *timeCharacteristic = NULL;
+CharacteristicCallbacks *timeCallback = NULL;
 
 void receiveWebSerial(uint8_t* data, size_t len) {
   String d = "";
@@ -97,8 +105,8 @@ void initializeWifiAndOTA() {
     Serial.printf("Connection to %s failed.", WIFI_SSID);
   }
 
-  const char* ntpServer = "pool.ntp.org";
-  configTime(0, 0, ntpServer);
+  // const char* ntpServer = "pool.ntp.org";
+  // configTime(0, 0, ntpServer);
 
   // Basic index page for HTTP server, HTTP server will be
   // used for OTA and WebSerial
@@ -138,14 +146,40 @@ void initializeBluetooth() {
   pServerCallbacks = new ServerCallbacks();
   pServer->setCallbacks(pServerCallbacks);
   pService = pServer->createService(SERVICE_UUID);
-  pCharacteristic = pService->createCharacteristic(
-    CHARACTERISTIC_UUID,
-    BLECharacteristic::PROPERTY_READ |
-    BLECharacteristic::PROPERTY_NOTIFY
-  );
 
-  pCharacteristic->addDescriptor(new BLE2902());
-  pCharacteristic->setValue("Hello world");
+  statusCharacteristic = pService->createCharacteristic(
+    STATUS_CHARACTERISTIC,
+    BLECharacteristic::PROPERTY_NOTIFY |
+    BLECharacteristic::PROPERTY_WRITE
+  );
+  statusCharacteristic->addDescriptor(new BLE2902());
+  statusCallback = new CharacteristicCallbacks();
+  statusCharacteristic->setCallbacks(statusCallback);
+
+  secretCharacteristic = pService->createCharacteristic(
+    SECRET_CHARACTERISTIC,
+    BLECharacteristic::PROPERTY_WRITE_NR
+  );
+  secretCallback = new CharacteristicCallbacks();
+  secretCharacteristic->setCallbacks(secretCallback);
+  
+  otpCharacteristic = pService->createCharacteristic(
+    OTP_CHARACTERISTIC,
+    BLECharacteristic::PROPERTY_INDICATE
+  );
+  otpCharacteristic->addDescriptor(new BLE2902());
+  otpCallback = new CharacteristicCallbacks();
+  otpCharacteristic->setCallbacks(otpCallback);
+
+  timeCharacteristic = pService->createCharacteristic(
+    TIME_CHARACTERISTIC,
+    BLECharacteristic::PROPERTY_WRITE
+  );
+  timeCallback = new CharacteristicCallbacks();
+  timeCharacteristic->setCallbacks(timeCallback);
+  pService->addCharacteristic(timeCharacteristic);
+
+  statusCharacteristic->setValue("Hello world");
   pService->start();
   BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
   pAdvertising->addServiceUUID(SERVICE_UUID);
@@ -178,8 +212,12 @@ void setup() {
 
 void loop() {
   if (millis() - lastBtUpdate > 5000) {
-    pCharacteristic->setValue(btTest);
-    pCharacteristic->notify();
+    statusCharacteristic->setValue(btTest);
+    statusCharacteristic->notify();
+
+    otpCharacteristic->setValue(btTest);
+    otpCharacteristic->indicate();
+
     lastBtUpdate = millis();
     btTest += 1;
   }
