@@ -1,5 +1,6 @@
 #include "ServerCallbacks.h"
 #include "creds.h"
+#include "statuses.h"
 
 #include <WebSerialLite.h>
 #include <time.h>
@@ -59,8 +60,11 @@ void CharacteristicCallbacks::onWrite(BLECharacteristic *pCharacteristic,
   WebSerial.println(pCharacteristic->getLength());
 
   if (uuid.toString() == STATUS_CHARACTERISTIC) {
-    statusCharHandler();
+    if (size == sizeof(uint8_t)) {
+      statusCharHandler(pCharacteristic, data[0]);
+    }
   } else if (uuid.toString() == SECRET_CHARACTERISTIC) {
+    // Stuff that happens when secret is written to
 
   } else if (uuid.toString() == TIME_CHARACTERISTIC) {
     timeCharHandler(pCharacteristic->getData(), pCharacteristic->getLength());
@@ -82,14 +86,35 @@ void CharacteristicCallbacks::onStatus(BLECharacteristic *pCharacteristic,
   if (s == BLECharacteristicCallbacks::ERROR_GATT ||
       s == BLECharacteristicCallbacks::ERROR_INDICATE_TIMEOUT ||
       s == BLECharacteristicCallbacks::ERROR_INDICATE_FAILURE) {
+    WebSerial.print("\n====");
     WebSerial.print("BLE status error: ");
     WebSerial.println(s);
+    WebSerial.print("Characteristic: ");
+    WebSerial.println(uuid.toString().c_str());
     WebSerial.print("Additional info: ");
     WebSerial.println(code);
   }
 }
 
-void CharacteristicCallbacks::statusCharHandler() {}
+void CharacteristicCallbacks::statusCharHandler(BLECharacteristic *statusCharacteristic, uint8_t data) {
+  try
+  {
+    if (data == ST_WriteFlowRequested) {
+      *m_rfidWriteMode = true;
+      statusCharacteristic->setValue(&ST_WriteFlowReady, sizeof(uint8_t));
+      statusCharacteristic->notify();
+    } else if (data == ST_WriteFlowEndRequest) {
+      *m_rfidWriteMode = false;
+      statusCharacteristic->setValue(&ST_Ready, sizeof(uint8_t));
+      statusCharacteristic->notify();
+    }
+  }
+  catch(const std::exception& e)
+  {
+    WebSerial.println(e.what());
+    statusCharacteristic->setValue(&ST_WriteFlowRequestFailed, sizeof(uint8_t));
+  }
+}
 
 void CharacteristicCallbacks::secretCharHandler() {}
 
@@ -119,4 +144,8 @@ void CharacteristicCallbacks::timeCharHandler(uint8_t *data, size_t size) {
   }
 
   WebSerial.println("Time set successfully");
+}
+
+void CharacteristicCallbacks::setRfidWriteModeValue(bool *t_rfidWriteMode) {
+  m_rfidWriteMode = t_rfidWriteMode;
 }

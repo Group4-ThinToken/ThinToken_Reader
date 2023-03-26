@@ -154,6 +154,7 @@ void initializeBluetooth() {
   );
   statusCharacteristic->addDescriptor(new BLE2902());
   statusCallback = new CharacteristicCallbacks();
+  statusCallback->setRfidWriteModeValue(&rfidWriteMode);
   statusCharacteristic->setCallbacks(statusCallback);
 
   secretCharacteristic = pService->createCharacteristic(
@@ -189,6 +190,8 @@ void initializeBluetooth() {
   BLEDevice::startAdvertising();
 
   wsCmdHandler.setBtServerCallbacks(pServerCallbacks);
+  wsCmdHandler.setOtpCharacteristic(otpCharacteristic);
+  wsCmdHandler.setStatusCharacteristic(statusCharacteristic);
   WebSerial.println("Bluetooth initialized:\nDevice Name: ThinToken Reader");
 }
 
@@ -211,16 +214,16 @@ void setup() {
 }
 
 void loop() {
-  if (millis() - lastBtUpdate > 5000) {
-    statusCharacteristic->setValue(btTest);
-    statusCharacteristic->notify();
+  // if (millis() - lastBtUpdate > 5000) {
+  //   statusCharacteristic->setValue(btTest);
+  //   statusCharacteristic->notify();
 
-    otpCharacteristic->setValue(btTest);
-    otpCharacteristic->indicate();
+  //   otpCharacteristic->setValue(btTest);
+  //   otpCharacteristic->indicate();
 
-    lastBtUpdate = millis();
-    btTest += 1;
-  }
+  //   lastBtUpdate = millis();
+  //   btTest += 1;
+  // }
 
   if (rfidReader.PICC_IsNewCardPresent()) {
     if (rfidReader.PICC_ReadCardSerial()) {

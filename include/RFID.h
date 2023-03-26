@@ -11,9 +11,15 @@ public:
   std::vector<byte> readTag(byte sector);
   int writeTag(byte sector, std::vector<byte> data);
 
+  // AES Related methods
+  void generateKey(char* personalString);
+  void decrypt(char* personalString);
+
 private:
   MFRC522* reader;
   MFRC522::MIFARE_Key MiKey;
+
+  static void decrypt();
 };
 
 #endif
