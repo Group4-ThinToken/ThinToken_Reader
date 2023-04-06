@@ -12,7 +12,7 @@ class WebSerialCmdHandler {
 public:
   WebSerialCmdHandler();
   void runCommand(String name, String arg);
-  void setRfidReader(MFRC522* t_reader);
+  void setRfidReader(MFRC522* t_reader, RFID* t_rfid);
   void setBtServerCallbacks(ServerCallbacks* t_btServerCallbacks);
   void setOtpCharacteristic(BLECharacteristic *t_otpCharacteristic);
   void setStatusCharacteristic(BLECharacteristic *t_statusCharacteristic);
@@ -21,6 +21,7 @@ public:
   void dumpToSerial(byte *buffer, size_t size);
 private:
   MFRC522* m_rfidReader;
+  RFID* m_rfid;
   ServerCallbacks* m_btServerCallbacks;
   BLECharacteristic* m_otpCharacteristic;
   BLECharacteristic* m_statusCharacteristic;
@@ -29,6 +30,9 @@ private:
   void reboot();
   void wifiInfo();
   void rfidRead();
+  void rfidSector(String arg);
+  void rfidInfo();
+  void rfidSetGain(std::string val);
   void bluetoothInfo();
   void otpTest(std::string testKey);
   void sendStatus(uint8_t val);

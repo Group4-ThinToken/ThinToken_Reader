@@ -1,6 +1,7 @@
 #include "ServerCallbacks.h"
 #include "creds.h"
 #include "statuses.h"
+#include "RFID.h"
 
 #include <WebSerialLite.h>
 #include <time.h>
@@ -10,6 +11,10 @@
 ServerCallbacks::ServerCallbacks() { n_devicesConnected = 0; }
 
 ServerCallbacks::~ServerCallbacks() {}
+
+void ServerCallbacks::setRfidWriteModeValue(bool *t_rfidWriteMode) {
+  m_rfidWriteMode = t_rfidWriteMode;
+}
 
 int ServerCallbacks::getNumConnected() { return n_devicesConnected; }
 
@@ -30,6 +35,9 @@ void ServerCallbacks::onDisconnect(BLEServer *pServer) {
   n_devicesConnected -= 1;
   WebSerial.println("Bluetooth device disconnected");
   pServer->startAdvertising();
+
+  // Reset RFID mode to read when BT disconnects
+  *m_rfidWriteMode = false;
 }
 
 // == Characteristic Callbacks
@@ -65,7 +73,9 @@ void CharacteristicCallbacks::onWrite(BLECharacteristic *pCharacteristic,
     }
   } else if (uuid.toString() == SECRET_CHARACTERISTIC) {
     // Stuff that happens when secret is written to
-
+    if (size != 0) {
+      secretCharHandler(data, size);
+    }
   } else if (uuid.toString() == TIME_CHARACTERISTIC) {
     timeCharHandler(pCharacteristic->getData(), pCharacteristic->getLength());
   }
@@ -77,6 +87,7 @@ void CharacteristicCallbacks::onStatus(BLECharacteristic *pCharacteristic,
   if (s == BLECharacteristicCallbacks::SUCCESS_INDICATE &&
       uuid.toString() == OTP_CHARACTERISTIC &&
       !pCharacteristic->getValue().empty()) {
+
     WebSerial.println("OTP Sent");
 
     pCharacteristic->setValue("");
@@ -96,6 +107,7 @@ void CharacteristicCallbacks::onStatus(BLECharacteristic *pCharacteristic,
   }
 }
 
+// Handler for the status characteristic
 void CharacteristicCallbacks::statusCharHandler(BLECharacteristic *statusCharacteristic, uint8_t data) {
   try
   {
@@ -116,8 +128,33 @@ void CharacteristicCallbacks::statusCharHandler(BLECharacteristic *statusCharact
   }
 }
 
-void CharacteristicCallbacks::secretCharHandler() {}
+// Handler for the secret characteristic
+void CharacteristicCallbacks::secretCharHandler(uint8_t *data, size_t size) {
+  Serial.printf("Secret characteristic handler:\nData size: %d\n", size);
+  WebSerial.print("Secret characteristic handler:\nData size: ");
+  WebSerial.println(size);
+  std::vector<byte> dataVector(data, data+size);
+  try {
+    Serial.println("Inside try");
+    WebSerial.println("Inside try");
+    auto mfrc = m_rfidReader->getReader();
 
+    int bytesWritten = m_rfidReader->appendAccount(dataVector);
+
+    // String d = "";
+    // for (unsigned int i = 0; i < res.size(); ++i) {
+    //   d += res.data()[i];
+    //   d += ' ';
+    // }
+    // WebSerial.println(d);
+  } catch(const std::exception& e) {
+    Serial.print("RFID Exception: ");
+    Serial.println(e.what());
+    Serial.printf("Free mem: %d", ESP.getFreeHeap());
+  }
+}
+
+// Handler for the time characteristic
 void CharacteristicCallbacks::timeCharHandler(uint8_t *data, size_t size) {
   if (size != 4) {
     WebSerial.println("Data size invalid to be UNIX timestamp.");
@@ -148,4 +185,8 @@ void CharacteristicCallbacks::timeCharHandler(uint8_t *data, size_t size) {
 
 void CharacteristicCallbacks::setRfidWriteModeValue(bool *t_rfidWriteMode) {
   m_rfidWriteMode = t_rfidWriteMode;
+}
+
+void CharacteristicCallbacks::setRfidReader(RFID *t_rfidReader) {
+  m_rfidReader = t_rfidReader;
 }

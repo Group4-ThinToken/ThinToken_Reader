@@ -10,8 +10,9 @@
 
 WebSerialCmdHandler::WebSerialCmdHandler() {}
 
-void WebSerialCmdHandler::setRfidReader(MFRC522 *t_reader) {
+void WebSerialCmdHandler::setRfidReader(MFRC522 *t_reader, RFID *t_rfid) {
   m_rfidReader = t_reader;
+  m_rfid = t_rfid;
 }
 
 void WebSerialCmdHandler::setBtServerCallbacks(ServerCallbacks* t_serverCallbacks) {
@@ -43,8 +44,19 @@ void WebSerialCmdHandler::runCommand(String name, String arg) {
     wifiInfo();
   } else if (name.equals("rfid read")) {
     rfidRead();
+  } else if (name.equals("rfid sector")) {
+    if (!arg.isEmpty()) {
+      rfidSector(arg);
+    }
   } else if (name.equals("rfid mode")) {
     *m_rfidWriteMode = arg.equals("write") ? true : false;
+  } else if (name.equals("rfid info")) {
+    rfidInfo();
+  } else if (name.equals("rfid setgain")) {
+    WebSerial.print("test");
+    if (!arg.isEmpty()) {
+      rfidSetGain(arg.c_str());
+    }
   } else if (name.equals("bt info")) {
     bluetoothInfo();
   } else if (name.equals("bt status")) {
@@ -163,6 +175,53 @@ void WebSerialCmdHandler::rfidRead() {
   } else {
     WebSerial.println("No tag detected");
   }
+}
+
+void WebSerialCmdHandler::rfidSector(String arg) {
+  bool readDone = false;
+  int sector = std::stoi(std::string(arg.c_str()));
+  std::vector<byte> out;
+
+  while (readDone == false) {
+    byte bufferATQA[2];
+    byte bufferSize = sizeof(bufferATQA);
+    m_rfidReader->PICC_WakeupA(bufferATQA, &bufferSize);
+    if (m_rfidReader->PICC_ReadCardSerial()) {
+      out = m_rfid->readSector(sector);
+      readDone = true;
+    }
+  }
+
+  dumpToSerial(out.data(), out.size());
+}
+
+void WebSerialCmdHandler::rfidInfo() {
+	// Get the MFRC522 firmware version (WebSerial)
+	byte v = m_rfidReader->PCD_ReadRegister(MFRC522::VersionReg);
+	WebSerial.print(F("Firmware Version: "));
+	WebSerial.print(v);
+	// Lookup which version
+	switch(v) {
+		case 0x88: WebSerial.println(F(" = (clone)"));  break;
+		case 0x90: WebSerial.println(F(" = v0.0"));     break;
+		case 0x91: WebSerial.println(F(" = v1.0"));     break;
+		case 0x92: WebSerial.println(F(" = v2.0"));     break;
+		case 0x12: WebSerial.println(F(" = counterfeit chip"));     break;
+		default:   WebSerial.println(F(" = (unknown)"));
+	}
+	// When 0x00 or 0xFF is returned, communication probably failed
+	if ((v == 0x00) || (v == 0xFF))
+		WebSerial.println(F("WARNING: Communication failure, is the MFRC522 properly connected?"));
+  
+  WebSerial.print("Antenna Gain: ");
+  WebSerial.println(m_rfidReader->PCD_GetAntennaGain());
+}
+
+void WebSerialCmdHandler::rfidSetGain(std::string val) {
+  int reg = std::stoi(val);
+  m_rfidReader->PCD_SetAntennaGain(reg);
+
+  WebSerial.println("Gain set.");
 }
 
 void WebSerialCmdHandler::bluetoothInfo() {

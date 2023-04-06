@@ -18,6 +18,7 @@
 #include "ServerCallbacks.h"
 #include "commands.h"
 #include "RFID.h"
+#include "statuses.h"
 
 // bool wifiApMode = false;  // This is currently unused 2/17/22
 
@@ -132,11 +133,12 @@ void initializeRfid() {
   rfidReader.PCD_Init();
   delay(12);
   rfidReader.PCD_DumpVersionToSerial();
+
   rfidWriteMode = false;
   lastRfidOp = 0;
   lastTagUid = {0};
 
-  wsCmdHandler.setRfidReader(&rfidReader);
+  wsCmdHandler.setRfidReader(&rfidReader, &reader);
   wsCmdHandler.setRfidWriteMode(&rfidWriteMode);
 }
 
@@ -144,6 +146,7 @@ void initializeBluetooth() {
   BLEDevice::init(DEVICE_NAME);
   pServer = BLEDevice::createServer();
   pServerCallbacks = new ServerCallbacks();
+  pServerCallbacks->setRfidWriteModeValue(&rfidWriteMode);
   pServer->setCallbacks(pServerCallbacks);
   pService = pServer->createService(SERVICE_UUID);
 
@@ -162,6 +165,7 @@ void initializeBluetooth() {
     BLECharacteristic::PROPERTY_WRITE_NR
   );
   secretCallback = new CharacteristicCallbacks();
+  secretCallback->setRfidReader(&reader);
   secretCharacteristic->setCallbacks(secretCallback);
   
   otpCharacteristic = pService->createCharacteristic(
@@ -214,54 +218,55 @@ void setup() {
 }
 
 void loop() {
-  // if (millis() - lastBtUpdate > 5000) {
-  //   statusCharacteristic->setValue(btTest);
-  //   statusCharacteristic->notify();
-
-  //   otpCharacteristic->setValue(btTest);
-  //   otpCharacteristic->indicate();
-
-  //   lastBtUpdate = millis();
-  //   btTest += 1;
-  // }
-
   if (rfidReader.PICC_IsNewCardPresent()) {
     if (rfidReader.PICC_ReadCardSerial()) {
-      if (millis() - lastRfidOp > 5000) {
+      if (millis() - lastRfidOp > 5000 && reader.mutexLock != true) {
+        reader.mutexLock = true;
+
+        reader.setPreviousUid(rfidReader.uid.uidByte, rfidReader.uid.size);
         WebSerial.println("Card UID: ");
         wsCmdHandler.dumpToSerial(rfidReader.uid.uidByte, rfidReader.uid.size);
         WebSerial.println();
 
         WebSerial.print("RFID Write Mode: ");
         WebSerial.println(rfidWriteMode);
+
         switch (rfidWriteMode) {
           case true: {
-            WebSerial.println("Writing to RFID Tag - Sector 1");
-            std::vector<byte> data = {0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF };
+            statusCharacteristic->setValue(&ST_WriteTagReady, 1);
+            statusCharacteristic->notify();
 
+            WebSerial.println("Writing to RFID Tag");
             try {
-              int nWritten = reader.writeTag(1, data);
-
-              WebSerial.print("Successfully written ");
-              WebSerial.print(nWritten);
-              WebSerial.println(" bytes.");
-            } catch(MFRC522::StatusCode e) {
-              WebSerial.print("Write failed. Status: ");
-              WebSerial.println(e);
+              int nBytes = reader.writeToTagUsingQueue();
+              WebSerial.print(nBytes);
+              WebSerial.println(" bytes written in total.");
+            } catch(const std::exception& e) {
+              WebSerial.println(e.what());
+            } catch(MFRC522::StatusCode status) {
+              WebSerial.println(MFRC522::GetStatusCodeName(status));
             }
+            
+            break;
           }
           case false: {
-            WebSerial.println("Card Data - Sector 1");
-            std::vector<byte> data = reader.readTag(1);
-            wsCmdHandler.dumpToSerial(data.data(), data.size());
-
+            WebSerial.println("Card Data - Sector 2");
+            try {
+              std::vector<byte> data = reader.readSector(2);
+              wsCmdHandler.dumpToSerial(data.data(), data.size());
+            } catch(const std::exception& e) {
+              WebSerial.println(e.what());
+            } catch(MFRC522::StatusCode status) {
+              WebSerial.println(MFRC522::GetStatusCodeName(status));
+            }
+            
             WebSerial.println("Done reading.");
           }
         }
 
+        reader.mutexLock = false;
         lastRfidOp = millis();
       }
     }
   }
-
 }
