@@ -19,6 +19,8 @@ public:
   void setPreviousUid(byte *uid, size_t size);
   bool sameAsPreviousUid(byte *uid, size_t size);
   std::vector<byte> getAvailableSectors();
+  void clearThinToken();
+  void clearWriteQueue();
 
   // AES Related methods
   void generateKey(char* personalString);

@@ -218,7 +218,10 @@ void setup() {
 }
 
 void loop() {
-  if (rfidReader.PICC_IsNewCardPresent()) {
+	byte bufferATQA[2];
+	byte bufferSize = sizeof(bufferATQA);
+
+  if (rfidReader.PICC_WakeupA(bufferATQA, &bufferSize) == MFRC522::STATUS_OK) {
     if (rfidReader.PICC_ReadCardSerial()) {
       if (millis() - lastRfidOp > 5000 && reader.mutexLock != true) {
         reader.mutexLock = true;
@@ -247,6 +250,8 @@ void loop() {
               WebSerial.println(MFRC522::GetStatusCodeName(status));
             }
             
+            rfidReader.PICC_HaltA();
+            rfidReader.PCD_StopCrypto1();
             break;
           }
           case false: {
@@ -260,6 +265,8 @@ void loop() {
               WebSerial.println(MFRC522::GetStatusCodeName(status));
             }
             
+            rfidReader.PICC_HaltA();
+            rfidReader.PCD_StopCrypto1();
             WebSerial.println("Done reading.");
           }
         }

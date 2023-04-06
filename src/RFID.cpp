@@ -57,8 +57,8 @@ std::vector<byte> RFID::readSector(byte sector) {
     std::fill_n(bufferRaw, 18, 0);
   }
 
-  reader->PICC_HaltA();
-  reader->PCD_StopCrypto1();
+  // reader->PICC_HaltA();
+  // reader->PCD_StopCrypto1();
 
   return buffer;
 }
@@ -93,8 +93,8 @@ int RFID::writeToSector(byte sector, std::vector<byte> data) {
     WebSerial.print("writeToSector: Data exceeds maximum 48 bytes. Received ");
     WebSerial.print(data.size());
     WebSerial.println(" padded.");
-    reader->PICC_HaltA();
-    reader->PCD_StopCrypto1();
+    // reader->PICC_HaltA();
+    // reader->PCD_StopCrypto1();
     throw 999; // Data exceed size exception
   }
 
@@ -118,41 +118,53 @@ int RFID::writeToSector(byte sector, std::vector<byte> data) {
     }
   }
 
-  reader->PICC_HaltA();
-  reader->PCD_StopCrypto1();
+  // reader->PICC_HaltA();
+  // reader->PCD_StopCrypto1();
 
   return data.size();
 }
 
-int RFID::writeToTagUsingQueue() { 
+int RFID::writeToTagUsingQueue() {
+  const size_t SECTOR_SIZE = 48;
   int bytesWritten = 0;
   while (!m_writeQueue.empty()) {
+    // Assign sector to write
+    byte sectorAddr;
+    if (std::get<0>(m_writeQueue.front()) != 15) {
+      sectorAddr = getAvailableSectors().front();
+    } else {
+      sectorAddr = 15;
+    }
 
-    bool writeDone = false;
+    if (sectorAddr != 0) {
+      std::get<0>(m_writeQueue.front()) = sectorAddr;
+    } else {
+      Serial.printf("sectorAddr: %d", sectorAddr);
+      throw std::out_of_range("Not enough space in ThinToken.");
+    }
+
+    std::get<0>(m_writeQueue.front()) = sectorAddr;
     try {
-      WebSerial.print("Writing to Sector ");
-      WebSerial.println(std::get<0>(m_writeQueue.front()));
+      std::get<1>(m_writeQueue.front()).resize(SECTOR_SIZE*3, 0);
+      std::vector<byte> sectorData(std::get<1>(m_writeQueue.front()));
 
-      bytesWritten += RFID::writeToSector(std::get<0>(m_writeQueue.front()),
-                                          std::get<1>(m_writeQueue.front()));
+      for (unsigned int i = 0; i < 3; i++) {
+        if (sectorAddr + i < 16 && sectorAddr > 0) {
+          WebSerial.print("Writing to Sector ");
+          WebSerial.println(sectorAddr + i);
+
+          bytesWritten += RFID::writeToSector(std::get<0>(m_writeQueue.front()) + i,
+                                              std::vector<byte>(sectorData.data() + (SECTOR_SIZE*i), sectorData.data() + (SECTOR_SIZE*(i+1))));
+        }
+      }
     } catch(int e) {
       if (e != 999) {
         throw e;
       }
     }
 
-    reader->PICC_HaltA();
-    bool updateDone = false;
-    while (updateDone == false) {
-      byte bufferATQA[2];
-      byte bufferSize = sizeof(bufferATQA);
-      reader->PICC_WakeupA(bufferATQA, &bufferSize);
-      if (reader->PICC_ReadCardSerial()) {
-        WebSerial.println("Update available space");
-        updateAvailableSectors(std::get<0>(m_writeQueue.front()));
-        updateDone = true;
-      }
-    }
+    WebSerial.println("Update available space");
+    updateAvailableSectors(std::get<0>(m_writeQueue.front()));
 
     WebSerial.print("Pop Queue: N: ");
     m_writeQueue.pop();
@@ -203,20 +215,10 @@ std::vector<byte> RFID::getAvailableSectors() {
   const int resAddr = 15;
   std::vector<byte> currAvail;
 
-  reader->PICC_HaltA();
-  reader->PCD_StopCrypto1();
+  // reader->PICC_HaltA();
+  // reader->PCD_StopCrypto1();
 
-  bool readDone = false;
-  while (readDone == false) {
-    byte bufferATQA[2];
-    byte bufferSize = sizeof(bufferATQA);
-    reader->PICC_WakeupA(bufferATQA, &bufferSize);
-
-    if (reader->PICC_ReadCardSerial()) {
-      currAvail = readSector(resAddr);
-      readDone = true;
-    }
-  }
+  currAvail = readSector(resAddr);
 
   WebSerial.print("Available sectors: ");
   String displayBuffer = "";
@@ -226,15 +228,31 @@ std::vector<byte> RFID::getAvailableSectors() {
   }
   WebSerial.println(displayBuffer);
 
-  reader->PICC_HaltA();
-  reader->PCD_StopCrypto1();
+  // reader->PICC_HaltA();
+  // reader->PCD_StopCrypto1();
 
   return currAvail;
 }
 
+/// @brief Clears the available space metadata of a tag
+/// @brief to clear all accounts and secrets
+void RFID::clearThinToken() {
+  const unsigned int BLOCK_SIZE = 16;
+  std::vector<byte> data = {10, 7, 4, 1};
+  data.resize(BLOCK_SIZE, 0);
+
+  m_writeQueue.push(std::make_tuple(15, data));
+}
+
+void RFID::clearWriteQueue() {
+  std::queue<std::tuple<byte, std::vector<byte>>> _;
+  std::swap(m_writeQueue, _);
+}
+
 void RFID::updateAvailableSectors(byte occupiedSector) {
   if (occupiedSector > 14) {
-    throw std::out_of_range("Sector must be less than 14");
+    std::string e = "Sector must be less than 14, got " + occupiedSector;
+    throw std::out_of_range(e);
   }
 
   // Read current available sectors
@@ -251,10 +269,6 @@ void RFID::updateAvailableSectors(byte occupiedSector) {
   Serial.println("Raw Available Sectors: ");
   Serial.println(displayBuffer);
 
-  if (isBufferAllZeroes(currAvail)) {
-    currAvail = {1, 4, 7, 10};
-  }
-
   for (int i = 0; i < currAvail.size(); i++) {
     if (currAvail[i] == occupiedSector) {
       currAvail.erase(currAvail.begin() + i);
@@ -264,20 +278,8 @@ void RFID::updateAvailableSectors(byte occupiedSector) {
   currAvail.resize(48);
   std::sort(currAvail.begin(), currAvail.end(), std::greater<byte>());
 
-  bool writeDone = false;
-  while (writeDone == false) {
-    byte bufferATQA[2];
-    byte bufferSize = sizeof(bufferATQA);
-    reader->PICC_WakeupA(bufferATQA, &bufferSize);
-    if (reader->PICC_ReadCardSerial()) {
-      // Write to sector 15 the newly occupied sector
-      writeToSector(resAddr, currAvail);
-      writeDone = true;
-    }
-  }
-
-  reader->PICC_HaltA();
-  reader->PCD_StopCrypto1();
+  // Write to sector 15 the newly occupied sector
+  writeToSector(resAddr, currAvail);
 }
 
 void RFID::decrypt() {

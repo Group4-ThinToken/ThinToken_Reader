@@ -52,6 +52,10 @@ void WebSerialCmdHandler::runCommand(String name, String arg) {
     *m_rfidWriteMode = arg.equals("write") ? true : false;
   } else if (name.equals("rfid info")) {
     rfidInfo();
+  } else if (name.equals("rfid clear")) {
+    m_rfid->clearThinToken();
+  } else if (name.equals("queue clear")) {
+    m_rfid->clearWriteQueue();
   } else if (name.equals("rfid setgain")) {
     WebSerial.print("test");
     if (!arg.isEmpty()) {
@@ -187,11 +191,19 @@ void WebSerialCmdHandler::rfidSector(String arg) {
     byte bufferSize = sizeof(bufferATQA);
     m_rfidReader->PICC_WakeupA(bufferATQA, &bufferSize);
     if (m_rfidReader->PICC_ReadCardSerial()) {
-      out = m_rfid->readSector(sector);
+      try {
+        out = m_rfid->readSector(sector);
+      } catch(MFRC522::StatusCode e) {
+        WebSerial.print("Exception in read: ");
+        WebSerial.println(MFRC522::GetStatusCodeName(e));
+      }
+      
       readDone = true;
     }
   }
 
+  m_rfidReader->PICC_HaltA();
+  m_rfidReader->PCD_StopCrypto1();
   dumpToSerial(out.data(), out.size());
 }
 
