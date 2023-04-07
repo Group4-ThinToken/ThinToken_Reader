@@ -163,8 +163,10 @@ int RFID::writeToTagUsingQueue() {
       }
     }
 
-    WebSerial.println("Update available space");
-    updateAvailableSectors(std::get<0>(m_writeQueue.front()));
+    if (sectorAddr != 15) {
+      WebSerial.println("Update available space");
+      updateAvailableSectors(std::get<0>(m_writeQueue.front()));
+    }
 
     WebSerial.print("Pop Queue: N: ");
     m_writeQueue.pop();

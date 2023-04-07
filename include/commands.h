@@ -17,6 +17,7 @@ public:
   void setOtpCharacteristic(BLECharacteristic *t_otpCharacteristic);
   void setStatusCharacteristic(BLECharacteristic *t_statusCharacteristic);
   void setRfidWriteMode(bool* t_rfidWriteMode);
+  void setPrintWakeupStatus(bool* t_printWakeupStatus);
   void dumpToSerial(byte *buffer, byte size);
   void dumpToSerial(byte *buffer, size_t size);
 private:
@@ -26,6 +27,7 @@ private:
   BLECharacteristic* m_otpCharacteristic;
   BLECharacteristic* m_statusCharacteristic;
   bool* m_rfidWriteMode;
+  bool* m_printWakeupStatus;
 
   void reboot();
   void wifiInfo();

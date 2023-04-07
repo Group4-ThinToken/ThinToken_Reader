@@ -33,6 +33,10 @@ void WebSerialCmdHandler::setRfidWriteMode(bool *t_rfidWriteMode) {
   m_rfidWriteMode = t_rfidWriteMode;
 }
 
+void WebSerialCmdHandler::setPrintWakeupStatus(bool *t_printWakeupStatus) {
+  m_printWakeupStatus = t_printWakeupStatus;
+}
+
 void WebSerialCmdHandler::runCommand(String name, String arg) {
   WebSerial.print(name);
   WebSerial.print(" ");
@@ -52,6 +56,9 @@ void WebSerialCmdHandler::runCommand(String name, String arg) {
     *m_rfidWriteMode = arg.equals("write") ? true : false;
   } else if (name.equals("rfid info")) {
     rfidInfo();
+  } else if (name.equals("rfid halt")) {
+    m_rfidReader->PICC_HaltA();
+    m_rfidReader->PCD_StopCrypto1();
   } else if (name.equals("rfid clear")) {
     m_rfid->clearThinToken();
   } else if (name.equals("queue clear")) {
@@ -61,7 +68,9 @@ void WebSerialCmdHandler::runCommand(String name, String arg) {
     if (!arg.isEmpty()) {
       rfidSetGain(arg.c_str());
     }
-  } else if (name.equals("bt info")) {
+  } else if (name.equals("rfid debug")) {
+    *m_printWakeupStatus = !*m_printWakeupStatus;
+  }else if (name.equals("bt info")) {
     bluetoothInfo();
   } else if (name.equals("bt status")) {
     if (arg.equals("Ready")) {

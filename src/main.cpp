@@ -31,8 +31,7 @@ RFID reader(&rfidReader);
 MFRC522::MIFARE_Key key;
 bool rfidWriteMode;
 unsigned long lastRfidOp;
-// byte lastTagUid[10];
-std::array<byte, 10> lastTagUid;
+bool printWakeupStatus;
 
 BLEServer *pServer = NULL;
 BLEService *pService = NULL;
@@ -45,6 +44,7 @@ CharacteristicCallbacks *secretCallback = NULL;
 BLECharacteristic *otpCharacteristic = NULL;
 CharacteristicCallbacks *otpCallback = NULL;
 BLECharacteristic *timeCharacteristic = NULL;
+BLECharacteristic *idCharacteristic = NULL;
 CharacteristicCallbacks *timeCallback = NULL;
 
 void receiveWebSerial(uint8_t* data, size_t len) {
@@ -136,10 +136,11 @@ void initializeRfid() {
 
   rfidWriteMode = false;
   lastRfidOp = 0;
-  lastTagUid = {0};
+  printWakeupStatus = false;
 
   wsCmdHandler.setRfidReader(&rfidReader, &reader);
   wsCmdHandler.setRfidWriteMode(&rfidWriteMode);
+  wsCmdHandler.setPrintWakeupStatus(&printWakeupStatus);
 }
 
 void initializeBluetooth() {
@@ -184,6 +185,12 @@ void initializeBluetooth() {
   timeCharacteristic->setCallbacks(timeCallback);
   pService->addCharacteristic(timeCharacteristic);
 
+  idCharacteristic = pService->createCharacteristic(
+    ID_CHARACTERISTIC,
+    BLECharacteristic::PROPERTY_READ
+  );
+  pService->addCharacteristic(idCharacteristic);
+
   statusCharacteristic->setValue("Hello world");
   pService->start();
   BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
@@ -221,10 +228,18 @@ void loop() {
 	byte bufferATQA[2];
 	byte bufferSize = sizeof(bufferATQA);
 
-  if (rfidReader.PICC_WakeupA(bufferATQA, &bufferSize) == MFRC522::STATUS_OK) {
+  MFRC522::StatusCode wakeupRes = rfidReader.PICC_WakeupA(bufferATQA, &bufferSize);
+
+  if (printWakeupStatus == true) {
+    Serial.println(MFRC522::GetStatusCodeName(wakeupRes));
+  }
+
+  if (wakeupRes == MFRC522::STATUS_OK) {
     if (rfidReader.PICC_ReadCardSerial()) {
       if (millis() - lastRfidOp > 5000 && reader.mutexLock != true) {
         reader.mutexLock = true;
+
+        idCharacteristic->setValue(rfidReader.uid.uidByte, rfidReader.uid.size);
 
         reader.setPreviousUid(rfidReader.uid.uidByte, rfidReader.uid.size);
         WebSerial.println("Card UID: ");
