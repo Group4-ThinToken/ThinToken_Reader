@@ -27,10 +27,6 @@ public:
   void readAccounts();
   int getItemsInReadQueue();
 
-  // AES Related methods
-  void generateKey(char* personalString);
-  void decrypt(char* personalString);
-
 private:
   MFRC522* reader;
   MFRC522::MIFARE_Key MiKey;

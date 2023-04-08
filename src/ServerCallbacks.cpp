@@ -205,8 +205,8 @@ void CharacteristicCallbacks::sectorCharHandler(uint8_t *data, size_t size) {
   WebSerial.print("Sector characteristic handler:\nData size: ");
   WebSerial.println(size);
 
-  if (size <= 0) {
-    std::string e = "Sector size must be greater than 0" + std::to_string(size);
+  if (size != 2) {
+    std::string e = "Sector size must be exactly 2. Got " + std::to_string(size);
     throw std::logic_error(e);
   }
 
@@ -220,9 +220,12 @@ void CharacteristicCallbacks::sectorCharHandler(uint8_t *data, size_t size) {
     WebSerial.println("Inside try sector char handler");
     auto mfrc = m_rfidReader->getReader();
 
-    for (unsigned int i = 0; i < size; i++) {
-      byte sector = dataVector[i];
-      m_rfidReader->queueRead(sector);
+    byte sector = dataVector[0];
+    m_rfidReader->queueRead(sector);
+    if (dataVector[1] == 0xFF) {
+      *m_otpMode = true;
+    } else {
+      *m_otpMode = false;
     }
 
   } catch(const std::exception& e) {
@@ -243,4 +246,8 @@ void CharacteristicCallbacks::setRfidWriteModeValue(bool *t_rfidWriteMode) {
 
 void CharacteristicCallbacks::setRfidReader(RFID *t_rfidReader) {
   m_rfidReader = t_rfidReader;
+}
+
+void CharacteristicCallbacks::setOtpMode(bool *t_otpMode) {
+  m_otpMode = t_otpMode;
 }

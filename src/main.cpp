@@ -30,6 +30,7 @@ MFRC522 rfidReader(SPI_SS, RST_PIN);
 RFID reader(&rfidReader);
 MFRC522::MIFARE_Key key;
 bool rfidWriteMode;
+bool otpMode;
 unsigned long lastRfidOp;
 bool printWakeupStatus;
 
@@ -162,6 +163,7 @@ void initializeBluetooth() {
   statusCharacteristic->addDescriptor(new BLE2902());
   statusCallback = new CharacteristicCallbacks(statusCharacteristic);
   statusCallback->setRfidWriteModeValue(&rfidWriteMode);
+  statusCallback->setOtpMode(&otpMode);
   statusCallback->setRfidReader(&reader);
   statusCharacteristic->setCallbacks(statusCallback);
 
@@ -298,9 +300,15 @@ void loop() {
             for (int i = 0; i < reader.getItemsInReadQueue(); i++) {
               std::vector<byte> data = reader.readOnceFromQueue();
               wsCmdHandler.dumpToSerial(data.data(), data.size());
+
               if (data.size() > 0) {
-                otpCharacteristic->setValue(data.data(), data.size());
-                otpCharacteristic->indicate();
+                // If otpMode, decrypt data then only return otp
+                if (otpMode) {
+
+                } else {
+                  otpCharacteristic->setValue(data.data(), data.size());
+                  otpCharacteristic->indicate();
+                }
               }
             }
             

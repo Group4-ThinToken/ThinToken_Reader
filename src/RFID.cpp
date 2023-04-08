@@ -387,50 +387,46 @@ void RFID::updateAvailableSectors(byte occupiedSector) {
   writeToSector(resAddr, currAvail);
 }
 
-void RFID::decrypt() {
-  mbedtls_aes_context context;
+// void RFID::decrypt() {
+//   mbedtls_aes_context context;
 
-  unsigned char key[32];
-  unsigned char iv[16];
+//   unsigned char key[32];
+//   unsigned char iv[16];
 
-  unsigned char input[512];
-  unsigned char output[512];
+//   unsigned char input[512];
+//   unsigned char output[512];
 
-  size_t input_len = 40;
-  size_t output_len = 0;
+//   size_t input_len = 40;
+//   size_t output_len = 0;
 
-  size_t* adjustedInput = &input_len;
+//   size_t* adjustedInput = &input_len;
 
-  // Generate key
-  mbedtls_ctr_drbg_context ctr_drbg;
-  mbedtls_entropy_context entropy;
+//   // Generate key
+//   mbedtls_ctr_drbg_context ctr_drbg;
+//   mbedtls_entropy_context entropy;
 
-  char *pers = "Test personalization string";
-  int ret;
+//   char *pers = "Test personalization string";
+//   int ret;
 
-  mbedtls_entropy_init(&entropy);
-  mbedtls_ctr_drbg_init(&ctr_drbg);
+//   mbedtls_entropy_init(&entropy);
+//   mbedtls_ctr_drbg_init(&ctr_drbg);
 
-  if( ( ret = mbedtls_ctr_drbg_seed( &ctr_drbg, mbedtls_entropy_func, &entropy,
-    (unsigned char *) pers, strlen( pers ) ) ) != 0 )
-  {
-    printf( " failed\n ! mbedtls_ctr_drbg_init returned -0x%04x\n", -ret );
-  }
+//   if( ( ret = mbedtls_ctr_drbg_seed( &ctr_drbg, mbedtls_entropy_func, &entropy,
+//     (unsigned char *) pers, strlen( pers ) ) ) != 0 )
+//   {
+//     printf( " failed\n ! mbedtls_ctr_drbg_init returned -0x%04x\n", -ret );
+//   }
 
-  if( ( ret = mbedtls_ctr_drbg_random( &ctr_drbg, key, 32 ) ) != 0 )
-  {
-    printf( " failed\n ! mbedtls_ctr_drbg_random returned -0x%04x\n", -ret );
-  }
-  // End generate key
+//   if( ( ret = mbedtls_ctr_drbg_random( &ctr_drbg, key, 32 ) ) != 0 )
+//   {
+//     printf( " failed\n ! mbedtls_ctr_drbg_random returned -0x%04x\n", -ret );
+//   }
+//   // End generate key
 
-  mbedtls_aes_init(&context);
-  mbedtls_aes_setkey_enc(&context, key, 256);
-  mbedtls_aes_crypt_cbc(&context, MBEDTLS_AES_ENCRYPT, 48, iv, input, output);
-}
-
-void RFID::generateKey(char* personalString) {
-
-}
+//   mbedtls_aes_init(&context);
+//   mbedtls_aes_setkey_enc(&context, key, 256);
+//   mbedtls_aes_crypt_cbc(&context, MBEDTLS_AES_ENCRYPT, 48, iv, input, output);
+// }
 
 bool RFID::isBufferAllZeroes(std::vector<byte> buffer) {
   bool isAll0 = true;

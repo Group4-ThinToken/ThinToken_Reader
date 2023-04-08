@@ -27,6 +27,7 @@ class CharacteristicCallbacks : public BLECharacteristicCallbacks {
 private:
   RFID* m_rfidReader;
   bool* m_rfidWriteMode;
+  bool* m_otpMode;
   BLECharacteristic* m_statusCharacteristic;
   void statusCharHandler(BLECharacteristic *statusCharacteristic, uint8_t data);
   void secretCharHandler(uint8_t *data, size_t size);
@@ -44,6 +45,7 @@ public:
   void onStatus(BLECharacteristic *pCharacteristic, Status s, uint32_t code);
   void setRfidWriteModeValue(bool *t_rfidWriteMode);
   void setRfidReader(RFID *t_rfidReader);
+  void setOtpMode(bool *t_otpMode);
 };
 
 #endif
