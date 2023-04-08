@@ -12,5 +12,8 @@ extern uint8_t ST_WriteTagReady;
 extern uint8_t ST_TagRead;
 extern uint8_t ST_WriteSuccess;
 extern uint8_t ST_WriteFailed;
+extern uint8_t ST_ReadQueueEmpty;
+extern uint8_t ST_ReadAllRequested;
+extern uint8_t ST_MutexLocked;
 
 #endif

@@ -33,6 +33,7 @@ private:
   void wifiInfo();
   void rfidRead();
   void rfidSector(String arg);
+  void availSectors();
   void rfidInfo();
   void rfidSetGain(std::string val);
   void bluetoothInfo();

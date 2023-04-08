@@ -61,6 +61,8 @@ void WebSerialCmdHandler::runCommand(String name, String arg) {
     m_rfidReader->PCD_StopCrypto1();
   } else if (name.equals("rfid clear")) {
     m_rfid->clearThinToken();
+  } else if (name.equals("rfid availSectors")) {
+    availSectors();
   } else if (name.equals("queue clear")) {
     m_rfid->clearWriteQueue();
   } else if (name.equals("rfid setgain")) {
@@ -202,6 +204,31 @@ void WebSerialCmdHandler::rfidSector(String arg) {
     if (m_rfidReader->PICC_ReadCardSerial()) {
       try {
         out = m_rfid->readSector(sector);
+      } catch(MFRC522::StatusCode e) {
+        WebSerial.print("Exception in read: ");
+        WebSerial.println(MFRC522::GetStatusCodeName(e));
+      }
+      
+      readDone = true;
+    }
+  }
+
+  m_rfidReader->PICC_HaltA();
+  m_rfidReader->PCD_StopCrypto1();
+  dumpToSerial(out.data(), out.size());
+}
+
+void WebSerialCmdHandler::availSectors() {
+  bool readDone = false;
+  std::vector<byte> out;
+
+  while (readDone == false) {
+    byte bufferATQA[2];
+    byte bufferSize = sizeof(bufferATQA);
+    m_rfidReader->PICC_WakeupA(bufferATQA, &bufferSize);
+    if (m_rfidReader->PICC_ReadCardSerial()) {
+      try {
+        out = m_rfid->getAvailableSectors();
       } catch(MFRC522::StatusCode e) {
         WebSerial.print("Exception in read: ");
         WebSerial.println(MFRC522::GetStatusCodeName(e));

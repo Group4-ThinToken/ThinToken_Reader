@@ -45,6 +45,7 @@ BLECharacteristic *otpCharacteristic = NULL;
 CharacteristicCallbacks *otpCallback = NULL;
 BLECharacteristic *timeCharacteristic = NULL;
 BLECharacteristic *idCharacteristic = NULL;
+BLECharacteristic *sectorCharacteristic = NULL;
 CharacteristicCallbacks *timeCallback = NULL;
 
 void receiveWebSerial(uint8_t* data, size_t len) {
@@ -141,6 +142,8 @@ void initializeRfid() {
   wsCmdHandler.setRfidReader(&rfidReader, &reader);
   wsCmdHandler.setRfidWriteMode(&rfidWriteMode);
   wsCmdHandler.setPrintWakeupStatus(&printWakeupStatus);
+
+  reader.immediateOpRequested = false;
 }
 
 void initializeBluetooth() {
@@ -157,15 +160,16 @@ void initializeBluetooth() {
     BLECharacteristic::PROPERTY_WRITE
   );
   statusCharacteristic->addDescriptor(new BLE2902());
-  statusCallback = new CharacteristicCallbacks();
+  statusCallback = new CharacteristicCallbacks(statusCharacteristic);
   statusCallback->setRfidWriteModeValue(&rfidWriteMode);
+  statusCallback->setRfidReader(&reader);
   statusCharacteristic->setCallbacks(statusCallback);
 
   secretCharacteristic = pService->createCharacteristic(
     SECRET_CHARACTERISTIC,
     BLECharacteristic::PROPERTY_WRITE_NR
   );
-  secretCallback = new CharacteristicCallbacks();
+  secretCallback = new CharacteristicCallbacks(statusCharacteristic);
   secretCallback->setRfidReader(&reader);
   secretCharacteristic->setCallbacks(secretCallback);
   
@@ -174,14 +178,15 @@ void initializeBluetooth() {
     BLECharacteristic::PROPERTY_INDICATE
   );
   otpCharacteristic->addDescriptor(new BLE2902());
-  otpCallback = new CharacteristicCallbacks();
+  otpCallback = new CharacteristicCallbacks(statusCharacteristic);
+  otpCallback->setRfidReader(&reader);
   otpCharacteristic->setCallbacks(otpCallback);
 
   timeCharacteristic = pService->createCharacteristic(
     TIME_CHARACTERISTIC,
     BLECharacteristic::PROPERTY_WRITE
   );
-  timeCallback = new CharacteristicCallbacks();
+  timeCallback = new CharacteristicCallbacks(statusCharacteristic);
   timeCharacteristic->setCallbacks(timeCallback);
   pService->addCharacteristic(timeCharacteristic);
 
@@ -190,6 +195,14 @@ void initializeBluetooth() {
     BLECharacteristic::PROPERTY_READ
   );
   pService->addCharacteristic(idCharacteristic);
+
+  sectorCharacteristic = pService->createCharacteristic(
+    SECTOR_CHARACTERISTIC,
+    BLECharacteristic::PROPERTY_NOTIFY |
+    BLECharacteristic::PROPERTY_WRITE
+  );
+  sectorCharacteristic->setCallbacks(statusCallback);
+  pService->addCharacteristic(sectorCharacteristic);
 
   statusCharacteristic->setValue("Hello world");
   pService->start();
@@ -236,10 +249,14 @@ void loop() {
 
   if (wakeupRes == MFRC522::STATUS_OK) {
     if (rfidReader.PICC_ReadCardSerial()) {
-      if (millis() - lastRfidOp > 5000 && reader.mutexLock != true) {
+      if (millis() - lastRfidOp > 5000 &&
+          reader.mutexLock != true ||
+          reader.immediateOpRequested == true) {
         reader.mutexLock = true;
 
         idCharacteristic->setValue(rfidReader.uid.uidByte, rfidReader.uid.size);
+        statusCharacteristic->setValue(&ST_TagRead, sizeof(uint8_t));
+        statusCharacteristic->notify();
 
         reader.setPreviousUid(rfidReader.uid.uidByte, rfidReader.uid.size);
         WebSerial.println("Card UID: ");
@@ -255,34 +272,42 @@ void loop() {
             statusCharacteristic->notify();
 
             WebSerial.println("Writing to RFID Tag");
+            int nBytes;
             try {
-              int nBytes = reader.writeToTagUsingQueue();
+              nBytes = reader.writeToTagUsingQueue();
               WebSerial.print(nBytes);
               WebSerial.println(" bytes written in total.");
             } catch(const std::exception& e) {
               WebSerial.println(e.what());
-            } catch(MFRC522::StatusCode status) {
+            } catch(MFRC522::StatusCode& status) {
               WebSerial.println(MFRC522::GetStatusCodeName(status));
+              statusCharacteristic->setValue(&ST_WriteFailed, sizeof(uint8_t));
+              statusCharacteristic->notify();
             }
             
             rfidReader.PICC_HaltA();
             rfidReader.PCD_StopCrypto1();
+
+            if (nBytes > 0) {
+              statusCharacteristic->setValue(&ST_WriteSuccess, sizeof(uint8_t));
+              statusCharacteristic->notify();
+            }
             break;
           }
           case false: {
-            WebSerial.println("Card Data - Sector 2");
-            try {
-              std::vector<byte> data = reader.readSector(2);
+            for (int i = 0; i < reader.getItemsInReadQueue(); i++) {
+              std::vector<byte> data = reader.readOnceFromQueue();
               wsCmdHandler.dumpToSerial(data.data(), data.size());
-            } catch(const std::exception& e) {
-              WebSerial.println(e.what());
-            } catch(MFRC522::StatusCode status) {
-              WebSerial.println(MFRC522::GetStatusCodeName(status));
+              if (data.size() > 0) {
+                otpCharacteristic->setValue(data.data(), data.size());
+                otpCharacteristic->indicate();
+              }
             }
             
             rfidReader.PICC_HaltA();
             rfidReader.PCD_StopCrypto1();
             WebSerial.println("Done reading.");
+            reader.immediateOpRequested = false;
           }
         }
 

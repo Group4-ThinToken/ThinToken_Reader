@@ -26,13 +26,18 @@ public:
 class CharacteristicCallbacks : public BLECharacteristicCallbacks {
 private:
   RFID* m_rfidReader;
-  bool *m_rfidWriteMode;
+  bool* m_rfidWriteMode;
+  BLECharacteristic* m_statusCharacteristic;
   void statusCharHandler(BLECharacteristic *statusCharacteristic, uint8_t data);
   void secretCharHandler(uint8_t *data, size_t size);
   void timeCharHandler(uint8_t *data, size_t size);
+  void sectorCharHandler(uint8_t *data, size_t size);
+
+  // Helpers
+  void sendStatus(uint8_t* statusCode);
 
 public:
-  CharacteristicCallbacks();
+  CharacteristicCallbacks(BLECharacteristic* t_statusCharacteristic);
   ~CharacteristicCallbacks();
   void onWrite(BLECharacteristic *pCharacteristic,
                esp_ble_gatts_cb_param_t *param);

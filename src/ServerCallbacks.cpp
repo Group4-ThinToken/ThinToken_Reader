@@ -42,7 +42,9 @@ void ServerCallbacks::onDisconnect(BLEServer *pServer) {
 
 // == Characteristic Callbacks
 
-CharacteristicCallbacks::CharacteristicCallbacks() {}
+CharacteristicCallbacks::CharacteristicCallbacks(BLECharacteristic* t_statusCharacteristic) {
+  m_statusCharacteristic = t_statusCharacteristic;
+}
 
 CharacteristicCallbacks::~CharacteristicCallbacks() {}
 
@@ -78,6 +80,14 @@ void CharacteristicCallbacks::onWrite(BLECharacteristic *pCharacteristic,
     }
   } else if (uuid.toString() == TIME_CHARACTERISTIC) {
     timeCharHandler(pCharacteristic->getData(), pCharacteristic->getLength());
+  } else if (uuid.toString() == SECTOR_CHARACTERISTIC) {
+    // Stuff that happends when sector is written to
+    try {
+      sectorCharHandler(pCharacteristic->getData(), pCharacteristic->getLength());
+    } catch(std::logic_error& e) {
+      WebSerial.println(e.what());
+      sendStatus(&ST_MutexLocked);
+    }
   }
 }
 
@@ -119,6 +129,13 @@ void CharacteristicCallbacks::statusCharHandler(BLECharacteristic *statusCharact
       *m_rfidWriteMode = false;
       statusCharacteristic->setValue(&ST_Ready, sizeof(uint8_t));
       statusCharacteristic->notify();
+    } else if (data == ST_ReadAllRequested) {
+      *m_rfidWriteMode = false;
+      m_rfidReader->queueRead(10);
+      m_rfidReader->queueRead(7);
+      m_rfidReader->queueRead(4);
+      m_rfidReader->queueRead(1);
+      m_rfidReader->immediateOpRequested = true;
     }
   }
   catch(const std::exception& e)
@@ -181,6 +198,43 @@ void CharacteristicCallbacks::timeCharHandler(uint8_t *data, size_t size) {
   }
 
   WebSerial.println("Time set successfully");
+}
+
+void CharacteristicCallbacks::sectorCharHandler(uint8_t *data, size_t size) {
+  Serial.printf("Sector characteristic handler:\nData size: %d\n", size);
+  WebSerial.print("Sector characteristic handler:\nData size: ");
+  WebSerial.println(size);
+
+  if (size <= 0) {
+    std::string e = "Sector size must be greater than 0" + std::to_string(size);
+    throw std::logic_error(e);
+  }
+
+  // if (m_rfidReader->mutexLock == true) {
+  //   std::string e = "RFID is in use. Retry later";
+  //   throw std::logic_error(e);
+  // }
+  std::vector<byte> dataVector(data, data+size);
+  try {
+    Serial.println("Inside try sector char handler");
+    WebSerial.println("Inside try sector char handler");
+    auto mfrc = m_rfidReader->getReader();
+
+    for (unsigned int i = 0; i < size; i++) {
+      byte sector = dataVector[i];
+      m_rfidReader->queueRead(sector);
+    }
+
+  } catch(const std::exception& e) {
+    Serial.print("RFID Exception: ");
+    Serial.println(e.what());
+    Serial.printf("Free mem: %d", ESP.getFreeHeap());
+  }
+}
+
+void CharacteristicCallbacks::sendStatus(uint8_t* statusCode) {
+  m_statusCharacteristic->setValue(statusCode, sizeof(uint8_t));
+  m_statusCharacteristic->notify();
 }
 
 void CharacteristicCallbacks::setRfidWriteModeValue(bool *t_rfidWriteMode) {

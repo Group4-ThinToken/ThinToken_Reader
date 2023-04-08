@@ -175,12 +175,66 @@ int RFID::writeToTagUsingQueue() {
   return bytesWritten; 
 }
 
+std::vector<byte> RFID::readOnceFromQueue() {
+  const size_t SECTOR_SIZE = 48;
+  std::vector<byte> data;
+
+  byte sectorAddr = m_readQueue.front();
+  if (sectorAddr > 14) {
+    throw std::out_of_range("Sector must be less than 14");
+  }
+
+  if (m_readQueue.empty()) {
+    throw std::logic_error("Read queue empty");
+  }
+
+  // Check available sectors, if the sector being read
+  // is "available", then dont return anything
+  auto avail = getAvailableSectors();
+  bool isSectorMarkedBlank = false;
+  for (unsigned int i = 0; i < avail.size(); i++) {
+    if (avail[i] == sectorAddr) {
+      isSectorMarkedBlank = true;
+    }
+  }
+
+  if (isSectorMarkedBlank) {
+    // Short circuit here
+    m_readQueue.pop();
+    return data;
+
+  }
+
+  WebSerial.print("Read From Queue - Sector ");
+  WebSerial.println(sectorAddr);
+
+  try {
+    for (byte i = 0; i < 3; i++) {
+      std::vector<byte> currSec = readSector(sectorAddr + i);
+      currSec.resize(SECTOR_SIZE, 0);
+      data.insert(data.end(), currSec.begin(), currSec.end());
+    }
+  } catch(MFRC522::StatusCode e) {
+    WebSerial.print("Read From Queue Error: ");
+    WebSerial.println(e);
+  }
+  
+  m_readQueue.pop();
+  return data;
+}
+
 int RFID::appendAccount(std::vector<byte> data) {
   Serial.println("Append account");
   byte tempAddr = 1;
 
   m_writeQueue.push(std::make_tuple(tempAddr, data));
   return data.size();
+}
+
+int RFID::queueRead(byte sector) {
+  Serial.println("Queue read");
+  m_readQueue.push(sector);
+  return sector;
 }
 
 void RFID::setPreviousUid(byte *uid, size_t size) {
@@ -249,6 +303,55 @@ void RFID::clearThinToken() {
 void RFID::clearWriteQueue() {
   std::queue<std::tuple<byte, std::vector<byte>>> _;
   std::swap(m_writeQueue, _);
+}
+
+void RFID::readAccounts() {
+  bool doneRead = false;
+  std::vector<byte> avail;
+
+  Serial.println("Read Accounts");
+  while (doneRead == false) {
+    byte bufferATQA[2];
+    byte bufferSize = sizeof(bufferATQA);
+    reader->PICC_WakeupA(bufferATQA, &bufferSize);
+    if (reader->PICC_ReadCardSerial()) {
+      Serial.println("Read Accounts > if");
+      try {
+        avail = getAvailableSectors();
+        doneRead = true;
+      } catch (MFRC522::StatusCode e) {
+        WebSerial.print("Exception in read: ");
+        WebSerial.println(MFRC522::GetStatusCodeName(e));
+      }
+    }
+  }
+
+  reader->PICC_HaltA();
+  reader->PCD_StopCrypto1();
+
+  const byte possible[4] = {10, 7, 4, 1};
+
+  Serial.println("Read Accounts > outside for");
+  for (int i = 0; i < 4; i++) {
+    Serial.println("Read Accounts > inside for");
+    // Checks if there is data on a given sector
+    // if there is, push it to read queue
+    bool isPresent = false;
+    for (int j = 0; j < avail.size(); j++) {
+      if (possible[i] == avail[j]) {
+        isPresent = true;
+      }
+    }
+
+    if (!isPresent) {
+      m_readQueue.push(possible[i]);
+    }
+  }
+
+}
+
+int RFID::getItemsInReadQueue() {
+  return m_readQueue.size();
 }
 
 void RFID::updateAvailableSectors(byte occupiedSector) {
