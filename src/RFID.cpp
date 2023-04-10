@@ -140,6 +140,9 @@ int RFID::writeToTagUsingQueue() {
       std::get<0>(m_writeQueue.front()) = sectorAddr;
     } else {
       Serial.printf("sectorAddr: %d", sectorAddr);
+      WebSerial.print("Pop Queue: N: ");
+      m_writeQueue.pop();
+      WebSerial.println(m_writeQueue.size());
       throw std::out_of_range("Not enough space in ThinToken.");
     }
 
@@ -351,7 +354,13 @@ void RFID::readAccounts() {
 }
 
 int RFID::getItemsInReadQueue() {
-  return m_readQueue.size();
+  size_t out = m_readQueue.size();
+  Serial.printf("Items in read queue: %d", out);
+  return out;
+}
+
+int RFID::getItemsInWriteQueue() {
+  return m_writeQueue.size();
 }
 
 void RFID::updateAvailableSectors(byte occupiedSector) {

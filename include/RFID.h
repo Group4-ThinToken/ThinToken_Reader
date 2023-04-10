@@ -26,6 +26,7 @@ public:
   void clearWriteQueue();
   void readAccounts();
   int getItemsInReadQueue();
+  int getItemsInWriteQueue();
 
 private:
   MFRC522* reader;

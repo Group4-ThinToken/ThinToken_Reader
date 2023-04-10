@@ -65,6 +65,11 @@ void WebSerialCmdHandler::runCommand(String name, String arg) {
     availSectors();
   } else if (name.equals("queue clear")) {
     m_rfid->clearWriteQueue();
+  } else if (name.equals("rfid queues")) {
+    WebSerial.print("Read queue: ");
+    WebSerial.println(m_rfid->getItemsInReadQueue());
+    WebSerial.print("Write queue: ");
+    WebSerial.println(m_rfid->getItemsInWriteQueue());
   } else if (name.equals("rfid setgain")) {
     WebSerial.print("test");
     if (!arg.isEmpty()) {

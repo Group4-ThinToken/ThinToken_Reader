@@ -281,6 +281,8 @@ void loop() {
               WebSerial.println(" bytes written in total.");
             } catch(const std::exception& e) {
               WebSerial.println(e.what());
+              statusCharacteristic->setValue(&ST_WriteFailed, sizeof(uint8_t));
+              statusCharacteristic->notify();
             } catch(MFRC522::StatusCode& status) {
               WebSerial.println(MFRC522::GetStatusCodeName(status));
               statusCharacteristic->setValue(&ST_WriteFailed, sizeof(uint8_t));
@@ -294,10 +296,12 @@ void loop() {
               statusCharacteristic->setValue(&ST_WriteSuccess, sizeof(uint8_t));
               statusCharacteristic->notify();
             }
+            rfidWriteMode = false;
             break;
           }
           case false: {
-            for (int i = 0; i < reader.getItemsInReadQueue(); i++) {
+            const size_t nItems = reader.getItemsInReadQueue();
+            for (int i = 0; i < nItems; i++) {
               std::vector<byte> data = reader.readOnceFromQueue();
               wsCmdHandler.dumpToSerial(data.data(), data.size());
 
