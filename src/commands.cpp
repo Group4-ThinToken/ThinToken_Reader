@@ -33,6 +33,10 @@ void WebSerialCmdHandler::setRfidWriteMode(bool *t_rfidWriteMode) {
   m_rfidWriteMode = t_rfidWriteMode;
 }
 
+void WebSerialCmdHandler::setOtpMode(bool *t_otpMode) {
+  m_otpMode = t_otpMode;
+}
+
 void WebSerialCmdHandler::setPrintWakeupStatus(bool *t_printWakeupStatus) {
   m_printWakeupStatus = t_printWakeupStatus;
 }
@@ -96,6 +100,11 @@ void WebSerialCmdHandler::runCommand(String name, String arg) {
   } else if (name.equals("otp test")) {
     const char *testKey = arg.c_str();
     otpTest(testKey);
+  } else if (name.equals("modes")) {
+    WebSerial.print("Write mode: ");
+    WebSerial.println(*m_rfidWriteMode);
+    WebSerial.print("OTP mode: ");
+    WebSerial.println(*m_otpMode);
   } else {
     WebSerial.println("Invalid command");
   }

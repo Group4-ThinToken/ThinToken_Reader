@@ -136,6 +136,9 @@ void CharacteristicCallbacks::statusCharHandler(BLECharacteristic *statusCharact
       m_rfidReader->queueRead(4);
       m_rfidReader->queueRead(1);
       m_rfidReader->immediateOpRequested = true;
+    } else if (data == ST_OtpRequested) {
+      *m_otpMode = true;
+      WebSerial.println("OTP Requested");
     }
   }
   catch(const std::exception& e)
@@ -156,14 +159,16 @@ void CharacteristicCallbacks::secretCharHandler(uint8_t *data, size_t size) {
     WebSerial.println("Inside try");
     auto mfrc = m_rfidReader->getReader();
 
-    int bytesWritten = m_rfidReader->appendAccount(dataVector);
+    WebSerial.print("OTP Mode: ");
+    WebSerial.println(*m_otpMode);
+    Serial.print("OTP Mode: ");
+    Serial.println(*m_otpMode);
+    if (*m_otpMode == true) {
+      m_crypto->setCryptoKeyAndIv(dataVector);
+    } else {
+      int bytesWritten = m_rfidReader->appendAccount(dataVector);
+    }
 
-    // String d = "";
-    // for (unsigned int i = 0; i < res.size(); ++i) {
-    //   d += res.data()[i];
-    //   d += ' ';
-    // }
-    // WebSerial.println(d);
   } catch(const std::exception& e) {
     Serial.print("RFID Exception: ");
     Serial.println(e.what());
@@ -205,6 +210,8 @@ void CharacteristicCallbacks::sectorCharHandler(uint8_t *data, size_t size) {
   WebSerial.print("Sector characteristic handler:\nData size: ");
   WebSerial.println(size);
 
+  // TODO: The 2nd byte is no longer used, the otpMode argument
+  // is now handled by the statusCharHandler for otpRequested
   if (size != 2) {
     std::string e = "Sector size must be exactly 2. Got " + std::to_string(size);
     throw std::logic_error(e);
@@ -222,12 +229,7 @@ void CharacteristicCallbacks::sectorCharHandler(uint8_t *data, size_t size) {
 
     byte sector = dataVector[0];
     m_rfidReader->queueRead(sector);
-    if (dataVector[1] == 0xFF) {
-      *m_otpMode = true;
-    } else {
-      *m_otpMode = false;
-    }
-
+    m_rfidReader->immediateOpRequested = true;
   } catch(const std::exception& e) {
     Serial.print("RFID Exception: ");
     Serial.println(e.what());
@@ -250,4 +252,8 @@ void CharacteristicCallbacks::setRfidReader(RFID *t_rfidReader) {
 
 void CharacteristicCallbacks::setOtpMode(bool *t_otpMode) {
   m_otpMode = t_otpMode;
+}
+
+void CharacteristicCallbacks::setCryptoModule(Crypto *t_cryptoModule) {
+  m_crypto = t_cryptoModule;
 }

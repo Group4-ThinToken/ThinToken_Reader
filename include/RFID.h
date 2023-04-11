@@ -15,7 +15,7 @@ public:
   MFRC522* getReader();
   std::vector<byte> readSector(byte sector);
   int writeToSector(byte sector, std::vector<byte> data);
-  int writeToTagUsingQueue();
+  int writeToTagUsingQueue(byte* sectorWrittenTo);
   std::vector<byte> readOnceFromQueue();
   int appendAccount(std::vector<byte> data);
   int queueRead(byte sector);

@@ -19,6 +19,8 @@
 #include "commands.h"
 #include "RFID.h"
 #include "statuses.h"
+#include "Crypto.h"
+#include "Authenticator.h"
 
 // bool wifiApMode = false;  // This is currently unused 2/17/22
 
@@ -48,6 +50,8 @@ BLECharacteristic *timeCharacteristic = NULL;
 BLECharacteristic *idCharacteristic = NULL;
 BLECharacteristic *sectorCharacteristic = NULL;
 CharacteristicCallbacks *timeCallback = NULL;
+
+Crypto crypto;
 
 void receiveWebSerial(uint8_t* data, size_t len) {
   String d = "";
@@ -142,6 +146,7 @@ void initializeRfid() {
 
   wsCmdHandler.setRfidReader(&rfidReader, &reader);
   wsCmdHandler.setRfidWriteMode(&rfidWriteMode);
+  wsCmdHandler.setOtpMode(&otpMode);
   wsCmdHandler.setPrintWakeupStatus(&printWakeupStatus);
 
   reader.immediateOpRequested = false;
@@ -173,6 +178,8 @@ void initializeBluetooth() {
   );
   secretCallback = new CharacteristicCallbacks(statusCharacteristic);
   secretCallback->setRfidReader(&reader);
+  secretCallback->setCryptoModule(&crypto);
+  secretCallback->setOtpMode(&otpMode);
   secretCharacteristic->setCallbacks(secretCallback);
   
   otpCharacteristic = pService->createCharacteristic(
@@ -182,6 +189,7 @@ void initializeBluetooth() {
   otpCharacteristic->addDescriptor(new BLE2902());
   otpCallback = new CharacteristicCallbacks(statusCharacteristic);
   otpCallback->setRfidReader(&reader);
+  otpCallback->setCryptoModule(&crypto);
   otpCharacteristic->setCallbacks(otpCallback);
 
   timeCharacteristic = pService->createCharacteristic(
@@ -251,7 +259,7 @@ void loop() {
 
   if (wakeupRes == MFRC522::STATUS_OK) {
     if (rfidReader.PICC_ReadCardSerial()) {
-      if (millis() - lastRfidOp > 5000 &&
+      if (millis() - lastRfidOp > 3000 &&
           reader.mutexLock != true ||
           reader.immediateOpRequested == true) {
         reader.mutexLock = true;
@@ -275,8 +283,9 @@ void loop() {
 
             WebSerial.println("Writing to RFID Tag");
             int nBytes;
+            byte sectorWrittenTo;
             try {
-              nBytes = reader.writeToTagUsingQueue();
+              nBytes = reader.writeToTagUsingQueue(&sectorWrittenTo);
               WebSerial.print(nBytes);
               WebSerial.println(" bytes written in total.");
             } catch(const std::exception& e) {
@@ -293,7 +302,14 @@ void loop() {
             rfidReader.PCD_StopCrypto1();
 
             if (nBytes > 0) {
-              statusCharacteristic->setValue(&ST_WriteSuccess, sizeof(uint8_t));
+              // Send a success response containing the status code
+              // tag id, and sector where the last write occured
+              byte out[6] = {ST_WriteSuccess};
+              for (unsigned int i = 0; i < rfidReader.uid.size; i++) {
+                out[i+1] = rfidReader.uid.uidByte[i];
+              }
+              out[5] = sectorWrittenTo;
+              statusCharacteristic->setValue(out, 6);
               statusCharacteristic->notify();
             }
             rfidWriteMode = false;
@@ -307,8 +323,26 @@ void loop() {
 
               if (data.size() > 0) {
                 // If otpMode, decrypt data then only return otp
+                WebSerial.print("OTP Mode: ");
+                WebSerial.println(otpMode);
                 if (otpMode) {
+                  auto ptext = crypto.decrypt(data);
+                  auto totpSecret = Authenticator::getSecret(&ptext);
+                  std::string secretStr(totpSecret.begin(), totpSecret.end());
 
+                  std::vector<uint8_t> decodeBuffer;
+                  auto secretSizePredict = (int)ceil(secretStr.size() / 1.6);
+                  decodeBuffer.resize(secretSizePredict);
+                  int count = Authenticator::base32Decode(secretStr.data(),
+                                                          decodeBuffer.data(),
+                                                          secretSizePredict);
+                  decodeBuffer.resize(count);
+                  uint32_t otp = Authenticator::generateOtp(decodeBuffer.data(),
+                                                            decodeBuffer.size());
+
+                  WebSerial.println("Sending via bluetooth");
+                  otpCharacteristic->setValue(otp);
+                  otpCharacteristic->indicate();
                 } else {
                   otpCharacteristic->setValue(data.data(), data.size());
                   otpCharacteristic->indicate();
@@ -320,6 +354,7 @@ void loop() {
             rfidReader.PCD_StopCrypto1();
             WebSerial.println("Done reading.");
             reader.immediateOpRequested = false;
+            otpMode = false;
           }
         }
 

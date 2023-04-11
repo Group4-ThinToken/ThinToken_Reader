@@ -2,6 +2,7 @@
 #define ServerCallbacks_h
 
 #include "RFID.h"
+#include "Crypto.h"
 
 #include <BLEDevice.h>
 #include <BLEServer.h>
@@ -29,6 +30,7 @@ private:
   bool* m_rfidWriteMode;
   bool* m_otpMode;
   BLECharacteristic* m_statusCharacteristic;
+  Crypto* m_crypto;
   void statusCharHandler(BLECharacteristic *statusCharacteristic, uint8_t data);
   void secretCharHandler(uint8_t *data, size_t size);
   void timeCharHandler(uint8_t *data, size_t size);
@@ -46,6 +48,7 @@ public:
   void setRfidWriteModeValue(bool *t_rfidWriteMode);
   void setRfidReader(RFID *t_rfidReader);
   void setOtpMode(bool *t_otpMode);
+  void setCryptoModule(Crypto *t_cryptoModule);
 };
 
 #endif

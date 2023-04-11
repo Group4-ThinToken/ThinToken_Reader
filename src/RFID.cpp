@@ -124,7 +124,7 @@ int RFID::writeToSector(byte sector, std::vector<byte> data) {
   return data.size();
 }
 
-int RFID::writeToTagUsingQueue() {
+int RFID::writeToTagUsingQueue(byte* sectorWrittenTo) {
   const size_t SECTOR_SIZE = 48;
   int bytesWritten = 0;
   while (!m_writeQueue.empty()) {
@@ -174,6 +174,11 @@ int RFID::writeToTagUsingQueue() {
     WebSerial.print("Pop Queue: N: ");
     m_writeQueue.pop();
     WebSerial.println(m_writeQueue.size());
+
+    // TODO: This will break for write queues greater than 1
+    // Current solution is to just not let the frontend queue
+    // more than once
+    *sectorWrittenTo = sectorAddr;
   }
   return bytesWritten; 
 }

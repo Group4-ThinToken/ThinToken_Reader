@@ -4,6 +4,7 @@
 #include <ctime>
 #include <HardwareSerial.h>
 #include <mbedtls/md.h>
+#include <WebSerialLite.h>
 
 uint32_t Authenticator::generateOtp(uint8_t *secret, size_t secretLength) {
   // Serial.println("Getting time");
@@ -33,7 +34,7 @@ uint32_t Authenticator::generateOtp(uint8_t *secret, size_t secretLength) {
   mbedtls_md_hmac_update(&context, (const unsigned char *)&currTime,
                          sizeof(currTime));
   mbedtls_md_hmac_finish(&context, hmacResult);
-  Serial.println((const char *)hmacResult);
+  // Serial.println((const char *)hmacResult);
   mbedtls_md_free(&context);
 
   // Serial.println("Generating DT");
@@ -80,16 +81,16 @@ int Authenticator::base32Decode(const char *encoded, uint8_t *result, int buffer
   int buffer = 0;
   int bits_left = 0;
   int count = 0;
-  Serial.println("Before loop");
+  // Serial.println("Before loop");
   for (const char *ptr = encoded; count < bufferLength && *ptr; ++ptr) {
-    Serial.println("Loop");
+    // Serial.println("Loop");
     uint8_t ch = *ptr;
     if (ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n' || ch == '-') {
       continue;
     }
     buffer <<= 5;
 
-    Serial.println("Mistyped");
+    // Serial.println("Mistyped");
     // Deal with commonly mistyped characters
     if (ch == '0') {
       ch = 'O';
@@ -99,7 +100,7 @@ int Authenticator::base32Decode(const char *encoded, uint8_t *result, int buffer
       ch = 'B';
     }
 
-    Serial.println("Mistyped");
+    // Serial.println("Mistyped");
     // Look up one base32 digit
     if ((ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z')) {
       ch = (ch & 0x1F) - 1;
@@ -110,7 +111,7 @@ int Authenticator::base32Decode(const char *encoded, uint8_t *result, int buffer
       return -1;
     }
 
-    Serial.println("Store");
+    // Serial.println("Store");
     buffer |= ch;
     bits_left += 5;
     if (bits_left >= 8) {
@@ -119,11 +120,46 @@ int Authenticator::base32Decode(const char *encoded, uint8_t *result, int buffer
     }
   }
 
-  Serial.println("Pad");
+  // Serial.println("Pad");
   if (count < bufferLength) {
     result[count] = '\000';
   }
   return count;
 }
 
+// Get the TOTP secret from <EMAIL>,<SECRET> vector
+std::vector<uint8_t> Authenticator::getSecret(std::vector<uint8_t> *in) {
+  const uint8_t DELIMITER = 0x2C;
+  int beginIdx;
+  for (beginIdx = 0; beginIdx < in->size(); beginIdx++) {
+    if (in->at(beginIdx) == DELIMITER) {
+      beginIdx++;
+      break;
+    }
+  }
+
+  if (beginIdx == in->size()) {
+    throw std::logic_error("Secret not found");
+  }
+
+  auto out = std::vector<uint8_t>(in->data() + beginIdx, in->data() + in->size());
+  _log("Secret", out.data(), out.size());
+  return out;
+}
+
 time_t Authenticator::getCurrTime() { return time(nullptr); }
+
+void Authenticator::_log(String display, uint8_t* buffer, size_t size) {
+  String a = "";
+  a += display;
+  a += " bytes: ";
+  a += size;
+
+  a += "\nData:\n";
+  for (unsigned int i = 0; i < size; i++) {
+    a += buffer[i];
+    a += ' ';
+  }
+  WebSerial.println(a);
+  Serial.println(a);
+}
