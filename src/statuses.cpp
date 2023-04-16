@@ -14,3 +14,4 @@ uint8_t ST_ReadAllRequested = 0x06;
 uint8_t ST_MutexLocked = 0x07;
 uint8_t ST_OtpRequested = 0x08;
 uint8_t ST_OtpFailed = 0x18;
+uint8_t ST_DeleteRequest = 0x19;

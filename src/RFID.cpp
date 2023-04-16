@@ -344,6 +344,7 @@ void RFID::unassignSector(byte sector) {
   currAvail.push_back(sector);
 
   std::sort(currAvail.begin(), currAvail.end(), std::greater<byte>());
+  std::unique(currAvail.begin(), currAvail.end());
   currAvail.resize(48);
 
   // Write to sector 15 the newly occupied sector

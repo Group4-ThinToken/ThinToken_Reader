@@ -72,6 +72,8 @@ void CharacteristicCallbacks::onWrite(BLECharacteristic *pCharacteristic,
   if (uuid.toString() == STATUS_CHARACTERISTIC) {
     if (size == sizeof(uint8_t)) {
       statusCharHandler(pCharacteristic, data[0]);
+    } else if (size == (sizeof(uint8_t) * 2)) {
+      statusCharHandler(pCharacteristic, data[0], data[1]);
     }
   } else if (uuid.toString() == SECRET_CHARACTERISTIC) {
     // Stuff that happens when secret is written to
@@ -140,6 +142,26 @@ void CharacteristicCallbacks::statusCharHandler(BLECharacteristic *statusCharact
       *m_otpMode = true;
       m_rfidReader->immediateOpRequested = true;
       WebSerial.println("OTP Requested");
+    }
+  }
+  catch(const std::exception& e)
+  {
+    WebSerial.println(e.what());
+    statusCharacteristic->setValue(&ST_WriteFlowRequestFailed, sizeof(uint8_t));
+  }
+}
+
+void CharacteristicCallbacks::statusCharHandler(BLECharacteristic *statusCharacteristic, uint8_t data, uint8_t param) {
+  try
+  {
+    if (data == ST_DeleteRequest) {
+      const std::array<byte, 4> allowedSectors = {10, 7, 4, 1};
+      if (std::count(allowedSectors.begin(), allowedSectors.end(), param) == 0) {
+        throw std::logic_error("Invalid sector");
+      }
+      m_rfidReader->queueDelete(param);
+      *m_rfidWriteMode = true;
+      m_rfidReader->immediateOpRequested = true;
     }
   }
   catch(const std::exception& e)

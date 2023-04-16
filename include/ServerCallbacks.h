@@ -32,6 +32,7 @@ private:
   BLECharacteristic* m_statusCharacteristic;
   Crypto* m_crypto;
   void statusCharHandler(BLECharacteristic *statusCharacteristic, uint8_t data);
+  void statusCharHandler(BLECharacteristic *statusCharacteristic, uint8_t data, uint8_t param);
   void secretCharHandler(uint8_t *data, size_t size);
   void timeCharHandler(uint8_t *data, size_t size);
   void sectorCharHandler(uint8_t *data, size_t size);

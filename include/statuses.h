@@ -17,5 +17,6 @@ extern uint8_t ST_ReadAllRequested;
 extern uint8_t ST_MutexLocked;
 extern uint8_t ST_OtpRequested;
 extern uint8_t ST_OtpFailed;
+extern uint8_t ST_DeleteRequest;
 
 #endif
