@@ -4,6 +4,7 @@
 #include <string>
 #include <MFRC522.h>
 #include "ServerCallbacks.h"
+#include "CredentialHandler.h"
 
 // Contains functions used in web serial commands
 // std::map<const char*, void*> cmdMap;
@@ -19,6 +20,7 @@ public:
   void setRfidWriteMode(bool* t_rfidWriteMode);
   void setOtpMode(bool* t_otpMode);
   void setPrintWakeupStatus(bool* t_printWakeupStatus);
+  void setCredentialHandler(CredentialHandler* t_creds);
   void dumpToSerial(byte *buffer, byte size);
   void dumpToSerial(byte *buffer, size_t size);
 private:
@@ -30,6 +32,7 @@ private:
   bool* m_rfidWriteMode;
   bool* m_otpMode;
   bool* m_printWakeupStatus;
+  CredentialHandler* m_creds;
 
   void reboot();
   void wifiInfo();

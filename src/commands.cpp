@@ -41,6 +41,10 @@ void WebSerialCmdHandler::setPrintWakeupStatus(bool *t_printWakeupStatus) {
   m_printWakeupStatus = t_printWakeupStatus;
 }
 
+void WebSerialCmdHandler::setCredentialHandler(CredentialHandler* t_creds) {
+  m_creds = t_creds;
+}
+
 void WebSerialCmdHandler::runCommand(String name, String arg) {
   WebSerial.print(name);
   WebSerial.print(" ");
@@ -105,6 +109,18 @@ void WebSerialCmdHandler::runCommand(String name, String arg) {
     WebSerial.println(*m_rfidWriteMode);
     WebSerial.print("OTP mode: ");
     WebSerial.println(*m_otpMode);
+  } else if (name.equals("set ssid")) {
+    m_creds->setWifiSsid(arg.c_str());
+  } else if (name.equals("set pass")) {
+    m_creds->setWifiPass(arg.c_str());
+  } else if (name.equals("set apSsid")) {
+    m_creds->setApSsid(arg.c_str());
+  } else if (name.equals("set apPass")) {
+    m_creds->setApSsid(arg.c_str());
+  } else if (name.equals("set hostname")) {
+    m_creds->setWifiHost(arg.c_str());
+  } else if (name.equals("set useDefaults")) {
+    m_creds->useDefaults();
   } else {
     WebSerial.println("Invalid command");
   }

@@ -11,6 +11,8 @@
 #include <BLEServer.h>
 #include <BLE2902.h>
 #include <time.h>
+#include "soc/soc.h"
+#include "soc/rtc_cntl_reg.h"
 
 #include "helpers.h"
 #include "creds.h"
@@ -21,6 +23,7 @@
 #include "statuses.h"
 #include "Crypto.h"
 #include "Authenticator.h"
+#include "CredentialHandler.h"
 
 // bool wifiApMode = false;  // This is currently unused 2/17/22
 
@@ -84,10 +87,15 @@ void receiveWebSerial(uint8_t* data, size_t len) {
 }
 
 void initializeWifiAndOTA() {
+  // Retrieve stored credentials
+  CredentialHandler creds;
+
   // Connect to WiFi network
   WiFi.mode(WIFI_AP_STA);
-  WiFi.softAP(AP_SSID, AP_PASSWORD);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  // WiFi.softAP(AP_SSID, AP_PASSWORD);
+  // WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  WiFi.softAP(creds.getApSsid(), creds.getApPass());
+  WiFi.begin(creds.getWifiSsid(), creds.getWifiPass());
   Serial.println("");
 
   unsigned long timeoutBegin = millis();
@@ -109,7 +117,12 @@ void initializeWifiAndOTA() {
     Serial.print("IP address: ");
     Serial.println(WiFi.localIP());
   } else {
-    Serial.printf("Connection to %s failed.", WIFI_SSID);
+    Serial.printf("\nConnection to %s failed.\n", WIFI_SSID);
+    WiFi.disconnect(false, true);
+    WiFi.mode(WIFI_AP);
+    WiFi.softAP(creds.getApSsid(), creds.getApPass());
+    Serial.println("Connect to ThinToken Reader AP at");
+    Serial.printf("SSID: %s\nPass: %s\n", creds.getApSsid(), creds.getApPass());
   }
 
   // const char* ntpServer = "pool.ntp.org";
@@ -132,6 +145,8 @@ void initializeWifiAndOTA() {
 
   Serial.print("Device time: ");
   Serial.println(time(nullptr));
+
+  wsCmdHandler.setCredentialHandler(&creds);
 }
 
 void initializeRfid() {
@@ -233,6 +248,7 @@ unsigned long lastBtUpdate;
 int btTest = 0;
 
 void setup() {
+  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
   pinMode(LED_BUILTIN, OUTPUT);
 
   digitalWrite(LED_BUILTIN, HIGH);
