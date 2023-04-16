@@ -130,20 +130,31 @@ int RFID::writeToTagUsingQueue(byte* sectorWrittenTo) {
   while (!m_writeQueue.empty()) {
     // Assign sector to write
     byte sectorAddr;
-    if (std::get<0>(m_writeQueue.front()) != 15) {
+    bool willUnassignSector = false;
+    if (std::get<0>(m_writeQueue.front()) < 15) {
       sectorAddr = getAvailableSectors().front();
-    } else {
+    } else if (std::get<0>(m_writeQueue.front()) > 100) {
+      sectorAddr = std::get<0>(m_writeQueue.front()) - 100;
+      willUnassignSector = true;
+      WebSerial.println("Deleting and unassigning sector");
+    } else if (std::get<0>(m_writeQueue.front()) == 15) {
       sectorAddr = 15;
+    } else {
+      throw std::logic_error("Invalid sector argument");
     }
 
     if (sectorAddr != 0) {
       std::get<0>(m_writeQueue.front()) = sectorAddr;
     } else {
-      Serial.printf("sectorAddr: %d", sectorAddr);
-      WebSerial.print("Pop Queue: N: ");
-      m_writeQueue.pop();
-      WebSerial.println(m_writeQueue.size());
-      throw std::out_of_range("Not enough space in ThinToken.");
+      if (!willUnassignSector) {
+        Serial.printf("sectorAddr: %d", sectorAddr);
+        WebSerial.print("Pop Queue: N: ");
+        m_writeQueue.pop();
+        WebSerial.println(m_writeQueue.size());
+        WebSerial.print("Sector addr: ");
+        WebSerial.println(sectorAddr);
+        throw std::out_of_range("Not enough space in ThinToken.");
+      }
     }
 
     std::get<0>(m_writeQueue.front()) = sectorAddr;
@@ -168,7 +179,12 @@ int RFID::writeToTagUsingQueue(byte* sectorWrittenTo) {
 
     if (sectorAddr != 15) {
       WebSerial.println("Update available space");
-      updateAvailableSectors(std::get<0>(m_writeQueue.front()));
+      if (!willUnassignSector) {
+        updateAvailableSectors(std::get<0>(m_writeQueue.front()));
+      } else {
+        unassignSector(std::get<0>(m_writeQueue.front()));
+        WebSerial.println("Delete and unassign successful");
+      }
     }
 
     WebSerial.print("Pop Queue: N: ");
@@ -245,6 +261,13 @@ int RFID::queueRead(byte sector) {
   return sector;
 }
 
+int RFID::queueDelete(byte sector) {
+  Serial.println("Queue delete");
+  std::vector<byte> blankData(48, 0);
+  m_writeQueue.push(std::make_tuple(sector + 100, blankData));
+  return sector;
+}
+
 void RFID::setPreviousUid(byte *uid, size_t size) {
   m_previousUid.clear();
   for (unsigned int i = 0; i < size; i++) {
@@ -296,6 +319,35 @@ std::vector<byte> RFID::getAvailableSectors() {
   // reader->PCD_StopCrypto1();
 
   return currAvail;
+}
+
+void RFID::unassignSector(byte sector) {
+  if (sector > 14) {
+    std::string e = "Sector must be less than 14, got " + sector;
+    throw std::out_of_range(e);
+  }
+
+  // Read current available sectors
+  const byte resAddr = 15;
+  std::vector<byte> currAvail = readSector(resAddr);
+
+  String displayBuffer = "";
+  for (int i = 0; i < currAvail.size(); i++) {
+    displayBuffer += currAvail[i];
+    displayBuffer += ' ';
+  }
+  WebSerial.println("Raw Available Sectors (Before unassign): ");
+  WebSerial.println(displayBuffer);
+  Serial.println("Raw Available Sectors (Before unassign): ");
+  Serial.println(displayBuffer);
+
+  currAvail.push_back(sector);
+
+  std::sort(currAvail.begin(), currAvail.end(), std::greater<byte>());
+  currAvail.resize(48);
+
+  // Write to sector 15 the newly occupied sector
+  writeToSector(resAddr, currAvail);
 }
 
 /// @brief Clears the available space metadata of a tag

@@ -19,9 +19,11 @@ public:
   std::vector<byte> readOnceFromQueue();
   int appendAccount(std::vector<byte> data);
   int queueRead(byte sector);
+  int queueDelete(byte sector);
   void setPreviousUid(byte *uid, size_t size);
   bool sameAsPreviousUid(byte *uid, size_t size);
   std::vector<byte> getAvailableSectors();
+  void unassignSector(byte sector);
   void clearThinToken();
   void clearWriteQueue();
   void readAccounts();

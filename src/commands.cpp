@@ -85,7 +85,14 @@ void WebSerialCmdHandler::runCommand(String name, String arg) {
     }
   } else if (name.equals("rfid debug")) {
     *m_printWakeupStatus = !*m_printWakeupStatus;
-  }else if (name.equals("bt info")) {
+  } else if (name.equals("rfid delete")) {
+    if (arg.isEmpty()) {
+      WebSerial.println("Argument empty");
+      return;
+    }
+    int sector = std::stoi(arg.c_str());
+    m_rfid->queueDelete(sector);
+  } else if (name.equals("bt info")) {
     bluetoothInfo();
   } else if (name.equals("bt status")) {
     if (arg.equals("Ready")) {
