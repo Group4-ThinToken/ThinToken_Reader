@@ -92,8 +92,8 @@ void initializeWifiAndOTA() {
 
   // Connect to WiFi network
   WiFi.mode(WIFI_AP_STA);
-  // WiFi.softAP(AP_SSID, AP_PASSWORD);
-  // WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE, INADDR_NONE);
+  WiFi.setHostname(creds.getWifiHost());
   WiFi.softAP(creds.getApSsid(), creds.getApPass());
   WiFi.begin(creds.getWifiSsid(), creds.getWifiPass());
   Serial.println("");
@@ -117,7 +117,7 @@ void initializeWifiAndOTA() {
     Serial.print("IP address: ");
     Serial.println(WiFi.localIP());
   } else {
-    Serial.printf("\nConnection to %s failed.\n", WIFI_SSID);
+    Serial.printf("\nConnection to %s failed.\n", creds.getWifiSsid());
     WiFi.disconnect(false, true);
     WiFi.mode(WIFI_AP);
     WiFi.softAP(creds.getApSsid(), creds.getApPass());
@@ -273,6 +273,8 @@ void loop() {
     Serial.println(MFRC522::GetStatusCodeName(wakeupRes));
   }
 
+  byte idBuffer[5] = {0, 0, 0, 0, 0};
+
   if (wakeupRes == MFRC522::STATUS_OK) {
     if (rfidReader.PICC_ReadCardSerial()) {
       if (millis() - lastRfidOp > 3000 &&
@@ -281,7 +283,14 @@ void loop() {
         reader.mutexLock = true;
 
         idCharacteristic->setValue(rfidReader.uid.uidByte, rfidReader.uid.size);
-        statusCharacteristic->setValue(&ST_TagRead, sizeof(uint8_t));
+        // First byte (byte 0) is the status code
+        // Byte 1, 2, 3, 4 is the tag id
+        idBuffer[0] = ST_TagRead;
+        idBuffer[1] = rfidReader.uid.uidByte[0];
+        idBuffer[2] = rfidReader.uid.uidByte[1];
+        idBuffer[3] = rfidReader.uid.uidByte[2];
+        idBuffer[4] = rfidReader.uid.uidByte[3];
+        statusCharacteristic->setValue(idBuffer, sizeof(uint8_t) * 5);
         statusCharacteristic->notify();
 
         reader.setPreviousUid(rfidReader.uid.uidByte, rfidReader.uid.size);

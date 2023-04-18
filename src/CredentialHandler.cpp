@@ -115,11 +115,11 @@ void CredentialHandler::_retrieveCredentials() {
   }
 
   Serial.println("Done retrieve");
-  Serial.println(m_wifiHost.c_str());
-  Serial.println(m_wifiSsid.c_str());
-  Serial.println(m_wifiPass.c_str());
-  Serial.println(m_apSsid.c_str());
-  Serial.println(m_apPass.c_str());
+  Serial.printf("%d %s.\n", m_wifiHost.length(), m_wifiHost.c_str());
+  Serial.printf("%d %s.\n", m_wifiSsid.length(), m_wifiSsid.c_str());
+  Serial.printf("%d %s.\n", m_wifiPass.length(), m_wifiPass.c_str());
+  Serial.printf("%d %s.\n", m_apSsid.length(), m_apSsid.c_str());
+  Serial.printf("%d %s.\n", m_apPass.length(), m_apPass.c_str());
 
   file.close();
 }

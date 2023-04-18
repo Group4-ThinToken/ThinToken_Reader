@@ -140,7 +140,7 @@ void CharacteristicCallbacks::statusCharHandler(BLECharacteristic *statusCharact
       m_rfidReader->immediateOpRequested = true;
     } else if (data == ST_OtpRequested) {
       *m_otpMode = true;
-      m_rfidReader->immediateOpRequested = true;
+      // m_rfidReader->immediateOpRequested = true;
       WebSerial.println("OTP Requested");
     }
   }
@@ -188,7 +188,7 @@ void CharacteristicCallbacks::secretCharHandler(uint8_t *data, size_t size) {
     Serial.println(*m_otpMode);
     if (*m_otpMode == true) {
       m_crypto->setCryptoKeyAndIv(dataVector);
-      m_rfidReader->immediateOpRequested = true;
+      // m_rfidReader->immediateOpRequested = true;
     } else {
       int bytesWritten = m_rfidReader->appendAccount(dataVector);
     }
