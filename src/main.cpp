@@ -101,7 +101,8 @@ void initializeWifiAndOTA() {
   unsigned long timeoutBegin = millis();
   unsigned long timeoutMax = 10000;
   // Wait for connection
-  while (millis() - timeoutBegin < timeoutMax && WiFi.status() != WL_CONNECTED) {
+  while (millis() - timeoutBegin < timeoutMax &&
+          WiFi.status() != WL_CONNECTED) {
     digitalWrite(LED_BUILTIN, LOW);
     delay(250);
     digitalWrite(LED_BUILTIN, HIGH);
@@ -122,7 +123,8 @@ void initializeWifiAndOTA() {
     WiFi.mode(WIFI_AP);
     WiFi.softAP(creds.getApSsid(), creds.getApPass());
     Serial.println("Connect to ThinToken Reader AP at");
-    Serial.printf("SSID: %s\nPass: %s\n", creds.getApSsid(), creds.getApPass());
+    Serial.printf("SSID: %s\nPass: %s\n", creds.getApSsid(),
+                  creds.getApPass());
   }
 
   // const char* ntpServer = "pool.ntp.org";
@@ -131,7 +133,8 @@ void initializeWifiAndOTA() {
   // Basic index page for HTTP server, HTTP server will be
   // used for OTA and WebSerial
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(200, "text/plain", "/update for OTA upload, /webserial for serial monitor");
+    request->send(200, "text/plain",
+                  "/update for OTA upload, /webserial for serial monitor");
   });
 
   // Elegant Async OTA
@@ -165,6 +168,7 @@ void initializeRfid() {
   wsCmdHandler.setPrintWakeupStatus(&printWakeupStatus);
 
   reader.immediateOpRequested = false;
+  rfidReader.PCD_SoftPowerDown();
 }
 
 void initializeBluetooth() {
@@ -172,6 +176,7 @@ void initializeBluetooth() {
   pServer = BLEDevice::createServer();
   pServerCallbacks = new ServerCallbacks();
   pServerCallbacks->setRfidWriteModeValue(&rfidWriteMode);
+  pServerCallbacks->setRfidReader(&reader);
   pServer->setCallbacks(pServerCallbacks);
   pService = pServer->createService(SERVICE_UUID);
 
@@ -249,16 +254,20 @@ int btTest = 0;
 
 void setup() {
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
+  setCpuFrequencyMhz(80);
+  uint32_t cpuFreq = getCpuFrequencyMhz();
   pinMode(LED_BUILTIN, OUTPUT);
 
   digitalWrite(LED_BUILTIN, HIGH);
 
   Serial.begin(115200);
+  Serial.printf("CPU Freq: %d\n", cpuFreq);
+
   initializeWifiAndOTA();
   initializeRfid();
   initializeBluetooth();
 
-  digitalWrite(LED_BUILTIN, LOW);
+  digitalWrite(LED_BUILTIN, HIGH);
 
   lastBtUpdate = millis();
 }
@@ -282,6 +291,7 @@ void loop() {
           reader.immediateOpRequested == true) {
         reader.mutexLock = true;
 
+        digitalWrite(LED_BUILTIN, LOW);
         idCharacteristic->setValue(rfidReader.uid.uidByte, rfidReader.uid.size);
         // First byte (byte 0) is the status code
         // Byte 1, 2, 3, 4 is the tag id
@@ -388,4 +398,5 @@ void loop() {
       }
     }
   }
+  digitalWrite(LED_BUILTIN, HIGH);
 }

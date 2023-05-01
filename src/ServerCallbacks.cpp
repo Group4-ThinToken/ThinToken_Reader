@@ -29,6 +29,8 @@ bool ServerCallbacks::deviceDidDisconnect() {
 void ServerCallbacks::onConnect(BLEServer *pServer) {
   n_devicesConnected += 1;
   WebSerial.println("Bluetooth device connected");
+  auto rfid = m_rfidReader->getReader();
+  rfid->PCD_SoftPowerUp();
 }
 
 void ServerCallbacks::onDisconnect(BLEServer *pServer) {
@@ -38,6 +40,12 @@ void ServerCallbacks::onDisconnect(BLEServer *pServer) {
 
   // Reset RFID mode to read when BT disconnects
   *m_rfidWriteMode = false;
+  auto rfid = m_rfidReader->getReader();
+  rfid->PCD_SoftPowerDown();
+}
+
+void ServerCallbacks::setRfidReader(RFID *t_rfidReader) {
+  m_rfidReader = t_rfidReader;
 }
 
 // == Characteristic Callbacks

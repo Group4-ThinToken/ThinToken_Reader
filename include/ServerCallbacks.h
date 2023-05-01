@@ -12,6 +12,7 @@ private:
   int n_devicesConnected;
   int n_devicesPreviouslyConnected;
   bool *m_rfidWriteMode;
+  RFID* m_rfidReader;
 
 public:
   ServerCallbacks();
@@ -22,6 +23,7 @@ public:
   bool deviceDidDisconnect();
   void onConnect(BLEServer *pServer);
   void onDisconnect(BLEServer *pServer);
+  void setRfidReader(RFID *t_rfidReader);
 };
 
 class CharacteristicCallbacks : public BLECharacteristicCallbacks {
