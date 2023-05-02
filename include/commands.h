@@ -21,6 +21,7 @@ public:
   void setOtpMode(bool* t_otpMode);
   void setPrintWakeupStatus(bool* t_printWakeupStatus);
   void setCredentialHandler(CredentialHandler* t_creds);
+  void setEnablePeriodicSleep(bool* t_enablePeriodicSleep);
   void dumpToSerial(byte *buffer, byte size);
   void dumpToSerial(byte *buffer, size_t size);
 private:
@@ -33,6 +34,7 @@ private:
   bool* m_otpMode;
   bool* m_printWakeupStatus;
   CredentialHandler* m_creds;
+  bool* m_enablePeriodicSleep;
 
   void reboot();
   void wifiInfo();
@@ -44,6 +46,8 @@ private:
   void bluetoothInfo();
   void otpTest(std::string testKey);
   void sendStatus(uint8_t val);
+  void togglePeriodicSleep();
+  void deepSleepTest();
 };
 
 #endif

@@ -27,6 +27,7 @@ bool ServerCallbacks::deviceDidDisconnect() {
 }
 
 void ServerCallbacks::onConnect(BLEServer *pServer) {
+  *m_enablePeriodicSleep = false;
   n_devicesConnected += 1;
   WebSerial.println("Bluetooth device connected");
   auto rfid = m_rfidReader->getReader();
@@ -34,6 +35,7 @@ void ServerCallbacks::onConnect(BLEServer *pServer) {
 }
 
 void ServerCallbacks::onDisconnect(BLEServer *pServer) {
+  *m_enablePeriodicSleep = true;
   n_devicesConnected -= 1;
   WebSerial.println("Bluetooth device disconnected");
   pServer->startAdvertising();
@@ -46,6 +48,10 @@ void ServerCallbacks::onDisconnect(BLEServer *pServer) {
 
 void ServerCallbacks::setRfidReader(RFID *t_rfidReader) {
   m_rfidReader = t_rfidReader;
+}
+
+void ServerCallbacks::setEnablePeriodicSleep(bool *t_enablePeriodicSleep) {
+  m_enablePeriodicSleep = t_enablePeriodicSleep;
 }
 
 // == Characteristic Callbacks

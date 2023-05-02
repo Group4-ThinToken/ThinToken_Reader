@@ -45,6 +45,10 @@ void WebSerialCmdHandler::setCredentialHandler(CredentialHandler* t_creds) {
   m_creds = t_creds;
 }
 
+void WebSerialCmdHandler::setEnablePeriodicSleep(bool *t_enablePeriodicSleep) {
+  m_enablePeriodicSleep = t_enablePeriodicSleep;
+}
+
 void WebSerialCmdHandler::runCommand(String name, String arg) {
   WebSerial.print(name);
   WebSerial.print(" ");
@@ -128,6 +132,10 @@ void WebSerialCmdHandler::runCommand(String name, String arg) {
     m_creds->setWifiHost(arg.c_str());
   } else if (name.equals("set useDefaults")) {
     m_creds->useDefaults();
+  } else if (name.equals("toggle psleep")) {
+    togglePeriodicSleep();
+  } else if (name.equals("sleep")) {
+    deepSleepTest();
   } else {
     WebSerial.println("Invalid command");
   }
@@ -320,4 +328,17 @@ void WebSerialCmdHandler::bluetoothInfo() {
 void WebSerialCmdHandler::sendStatus(uint8_t val) {
   m_statusCharacteristic->setValue(&val, 1);
   m_statusCharacteristic->notify();
+}
+
+void WebSerialCmdHandler::togglePeriodicSleep() {
+  bool currentVal = *m_enablePeriodicSleep;
+  *m_enablePeriodicSleep = !currentVal;
+  WebSerial.print("Periodic sleep: ");
+  WebSerial.println(*m_enablePeriodicSleep);
+}
+
+void WebSerialCmdHandler::deepSleepTest() {
+  delay(1000);
+  Serial.flush();
+  esp_deep_sleep_start();
 }

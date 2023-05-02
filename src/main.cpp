@@ -56,6 +56,11 @@ CharacteristicCallbacks *timeCallback = NULL;
 
 Crypto crypto;
 
+RTC_DATA_ATTR int bootCount = 0;
+RTC_DATA_ATTR bool rtc_enablePeriodicSleep = false;
+bool enablePeriodicSleep = false;
+unsigned long lastSleepMillis = 0;
+
 void receiveWebSerial(uint8_t* data, size_t len) {
   String d = "";
   String arg = "";
@@ -99,7 +104,7 @@ void initializeWifiAndOTA() {
   Serial.println("");
 
   unsigned long timeoutBegin = millis();
-  unsigned long timeoutMax = 10000;
+  unsigned long timeoutMax = 500;
   // Wait for connection
   while (millis() - timeoutBegin < timeoutMax &&
           WiFi.status() != WL_CONNECTED) {
@@ -150,6 +155,7 @@ void initializeWifiAndOTA() {
   Serial.println(time(nullptr));
 
   wsCmdHandler.setCredentialHandler(&creds);
+  wsCmdHandler.setEnablePeriodicSleep(&enablePeriodicSleep);
 }
 
 void initializeRfid() {
@@ -177,6 +183,7 @@ void initializeBluetooth() {
   pServerCallbacks = new ServerCallbacks();
   pServerCallbacks->setRfidWriteModeValue(&rfidWriteMode);
   pServerCallbacks->setRfidReader(&reader);
+  pServerCallbacks->setEnablePeriodicSleep(&enablePeriodicSleep);
   pServer->setCallbacks(pServerCallbacks);
   pService = pServer->createService(SERVICE_UUID);
 
@@ -257,6 +264,10 @@ void setup() {
   setCpuFrequencyMhz(80);
   uint32_t cpuFreq = getCpuFrequencyMhz();
   pinMode(LED_BUILTIN, OUTPUT);
+  ++bootCount;
+  Serial.printf("ESP32 Woke up from deep sleep.\nBoot Count: %s", String(bootCount));
+  esp_sleep_enable_timer_wakeup(5*1000000);
+  enablePeriodicSleep = rtc_enablePeriodicSleep;
 
   digitalWrite(LED_BUILTIN, HIGH);
 
@@ -283,6 +294,18 @@ void loop() {
   }
 
   byte idBuffer[5] = {0, 0, 0, 0, 0};
+
+  if (enablePeriodicSleep == true) {
+    rtc_enablePeriodicSleep = true;
+    if (millis() - lastSleepMillis > 15000) {
+      lastSleepMillis = 0;
+      delay(1000);
+      Serial.flush();
+      esp_deep_sleep_start();
+    }
+  } else {
+    rtc_enablePeriodicSleep = false;
+  }
 
   if (wakeupRes == MFRC522::STATUS_OK) {
     if (rfidReader.PICC_ReadCardSerial()) {
