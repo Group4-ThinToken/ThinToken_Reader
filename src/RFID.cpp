@@ -105,8 +105,6 @@ int RFID::writeToSector(byte sector, std::vector<byte> data) {
   WebSerial.println(dataSizeInBlocks);
 
   for (int i = 0; i < dataSizeInBlocks; ++i) {
-    // TODO: Test addressing logic, cuz read fn was wrong
-    // Comment for now to avoid wrong writes
     WebSerial.print("Data Written to addr ");
     WebSerial.println(blockStart + i);
     status = reader->MIFARE_Write(blockStart + i, std::vector<byte>(data.data() + (BLOCK_SIZE*i), data.data() + (BLOCK_SIZE*(i+1))).data(), 16);
@@ -191,9 +189,6 @@ int RFID::writeToTagUsingQueue(byte* sectorWrittenTo) {
     m_writeQueue.pop();
     WebSerial.println(m_writeQueue.size());
 
-    // TODO: This will break for write queues greater than 1
-    // Current solution is to just not let the frontend queue
-    // more than once
     *sectorWrittenTo = sectorAddr;
   }
   return bytesWritten; 

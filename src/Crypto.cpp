@@ -12,11 +12,7 @@ Crypto::~Crypto() {}
 std::vector<uint8_t> Crypto::decrypt(std::vector<uint8_t> input) {
   _log("Decrypt in", input.data(), input.size());
   mbedtls_gcm_context aes;
-  // TODO: Out buffer reads correctly, but is filled with garbage halfway in
-  // Idea: Maybe initially, fill the outbuffer with a known value
-  // so that when decrpyt rewrites it, we can see where actual data ends
   uint8_t outBuffer[256];
-  // std::vector<uint8_t> outBuffer(256, 0xFF);
 
   mbedtls_gcm_init(&aes);
   mbedtls_gcm_setkey(&aes, MBEDTLS_CIPHER_ID_AES, m_lastCryptoKey.data(), 256);

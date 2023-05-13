@@ -57,8 +57,8 @@ CharacteristicCallbacks *timeCallback = NULL;
 Crypto crypto;
 
 RTC_DATA_ATTR int bootCount = 0;
-RTC_DATA_ATTR bool rtc_enablePeriodicSleep = false;
-bool enablePeriodicSleep = false;
+RTC_DATA_ATTR bool rtc_enablePeriodicSleep = true;
+bool enablePeriodicSleep = true;
 unsigned long lastSleepMillis = 0;
 
 void receiveWebSerial(uint8_t* data, size_t len) {
@@ -116,7 +116,6 @@ void initializeWifiAndOTA() {
   }
 
   if (WiFi.status() == WL_CONNECTED) {
-    // TODO: This is not working as intended
     Serial.println("");
     Serial.print("Connected to ");
     Serial.println(WIFI_SSID);
@@ -297,7 +296,7 @@ void loop() {
 
   if (enablePeriodicSleep == true) {
     rtc_enablePeriodicSleep = true;
-    if (millis() - lastSleepMillis > 15000) {
+    if (millis() - lastSleepMillis > 15 * 1000) {
       lastSleepMillis = 0;
       delay(1000);
       Serial.flush();

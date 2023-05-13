@@ -248,8 +248,6 @@ void CharacteristicCallbacks::sectorCharHandler(uint8_t *data, size_t size) {
   WebSerial.print("Sector characteristic handler:\nData size: ");
   WebSerial.println(size);
 
-  // TODO: The 2nd byte is no longer used, the otpMode argument
-  // is now handled by the statusCharHandler for otpRequested
   if (size != 2) {
     std::string e = "Sector size must be exactly 2. Got " + std::to_string(size);
     throw std::logic_error(e);

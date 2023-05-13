@@ -47,10 +47,6 @@ uint32_t Authenticator::generateOtp(uint8_t *secret, size_t secretLength) {
                      (hmacResult[offset + 2] & 0xFFU) << 8 |
                      (hmacResult[offset + 3] & 0xFFU);
 
-  // Possible future bug: If otp code starts with 0, the 0 will not be part of output
-  // ex: OTP:    049 239
-  //     Output:  49 239
-  // Serial.println("Converting bases");
   return binCode % (int)pow(10, 6); // 6 denotes the number of digits of the otp
 }
 
